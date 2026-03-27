@@ -1,0 +1,18 @@
+@import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+
+/* Custom styles for Leaflet popups to match our theme */
+.leaflet-popup-content-wrapper {
+  border-radius: 1rem;
+  padding: 0;
+  overflow: hidden;
+}
+
+.leaflet-popup-content {
+  margin: 0;
+  width: 300px !important;
+}
+
+.leaflet-container {
+  font-family: inherit;
+}
