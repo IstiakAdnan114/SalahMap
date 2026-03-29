@@ -166,15 +166,21 @@ const MosquePopup: React.FC<MosquePopupProps> = ({ mosque, onClose, onDelete, on
   const handleUpdateTimes = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await mosqueService.updatePrayerTimes({
+      const updated = await mosqueService.updatePrayerTimes({
         mosque_id: mosque.id,
         ...formData
       });
+      setTimes(updated);
       setIsUpdating(false);
-      loadTimes();
+      // We don't need to call loadTimes() again because we have the updated data
+      // but we might want to refresh votes if they were reset
+      if (updated) {
+        // Reset user votes locally for this set of times since they are new
+        setUserVotes({});
+      }
     } catch (error) {
       console.error(error);
-      alert('Failed to update times');
+      alert('Failed to update times. Please check your connection and try again.');
     }
   };
 

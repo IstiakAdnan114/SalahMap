@@ -106,14 +106,19 @@ export const mosqueService = {
   async ensureMosqueExists(mosque: Mosque) {
     if (isSupabaseConfigured && mosque.id.startsWith('osm-')) {
       try {
-        const { data: existing } = await supabase
+        const { data: existing, error: checkError } = await supabase
           .from('mosques')
           .select('id')
           .eq('id', mosque.id)
           .maybeSingle();
         
+        if (checkError) {
+          console.error('Error checking mosque existence:', checkError);
+          return false;
+        }
+
         if (!existing) {
-          await supabase
+          const { error: insertError } = await supabase
             .from('mosques')
             .insert([{
               id: mosque.id,
@@ -122,15 +127,23 @@ export const mosqueService = {
               longitude: mosque.longitude,
               address: mosque.address
             }]);
+          
+          if (insertError) {
+            console.error('Error inserting OSM mosque into DB:', insertError);
+            return false;
+          }
         }
+        return true;
       } catch (e) {
         console.error('Error ensuring mosque exists:', e);
+        return false;
       }
     }
+    return true;
   },
 
   async getPrayerTimes(mosqueId: string): Promise<PrayerTimes | null> {
-    if (isSupabaseConfigured) {
+    if (isSupabaseConfigured && !mosqueId.startsWith('local-')) {
       try {
         // 1. Try to get existing prayer times
         const { data, error } = await supabase
@@ -157,26 +170,8 @@ export const mosqueService = {
           console.error('Error fetching prayer times:', error);
         } else if (!data) {
           // 2. No record exists. 
-          // If it's an OSM mosque, we should ensure it exists in the mosques table
-          // to avoid foreign key violations.
-          if (mosqueId.startsWith('osm-')) {
-            try {
-              // Check if mosque exists in our DB
-              const { data: existingMosque } = await supabase
-                .from('mosques')
-                .select('id')
-                .eq('id', mosqueId)
-                .maybeSingle();
-              
-              if (!existingMosque) {
-                // We'll try to insert it later if needed, but for now we'll just try to insert prayer times
-                // If the DB has a strict FK, we need to handle it.
-              }
-            } catch (e) {
-              console.error('Error checking mosque record:', e);
-            }
-          }
-
+          // Note: ensureMosqueExists should have been called by the component
+          // but we'll try to insert default times anyway.
           const defaultTimes = {
             mosque_id: mosqueId,
             fajr: '05:30',
@@ -235,7 +230,7 @@ export const mosqueService = {
   },
 
   async updatePrayerTimes(times: Partial<PrayerTimes> & { mosque_id: string }): Promise<PrayerTimes> {
-    if (isSupabaseConfigured) {
+    if (isSupabaseConfigured && !times.mosque_id.startsWith('local-')) {
       try {
         // 1. Get the current latest record to compare
         const { data: current } = await supabase
@@ -297,7 +292,7 @@ export const mosqueService = {
         return data;
       } catch (e) {
         console.error('Supabase updatePrayerTimes error:', e);
-        throw e;
+        // Fall back to local storage instead of throwing
       }
     }
 
