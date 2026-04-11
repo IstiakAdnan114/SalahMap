@@ -36,20 +36,20 @@ const AddMosqueModal: React.FC<AddMosqueModalProps> = ({ isOpen, onClose, userLo
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[650] flex items-end sm:items-center justify-center p-0 sm:p-4 pointer-events-none">
+        <div className="fixed inset-0 z-[800] flex items-end sm:items-center justify-center p-0 sm:p-4 pointer-events-none">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="absolute inset-0 bg-black/10"
+            className="absolute inset-0 bg-black/20 backdrop-blur-sm pointer-events-auto"
           />
           <motion.div
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="relative w-full max-w-lg bg-white rounded-t-[32px] sm:rounded-[32px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] sm:max-h-[85vh] pointer-events-auto"
+            className="relative w-full max-w-lg bg-white rounded-t-[32px] sm:rounded-[32px] shadow-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[85vh] pointer-events-auto"
           >
             <div className="flex justify-between items-center p-6 pb-2 shrink-0">
               <h2 className="text-2xl font-black text-slate-900">Add Mosque</h2>
@@ -61,8 +61,8 @@ const AddMosqueModal: React.FC<AddMosqueModalProps> = ({ isOpen, onClose, userLo
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 pt-2">
-              <form onSubmit={handleSubmit} className="space-y-6 pb-6">
+            <div className="flex-1 overflow-y-auto p-6 pt-2 pb-12">
+              <form onSubmit={handleSubmit} className="space-y-6 pb-10">
                 <div>
                   <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Mosque Name</label>
                   <input

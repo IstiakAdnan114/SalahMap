@@ -1,20 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Map from './components/Map';
-import Radar from './components/Radar';
 import AddMosqueModal from './components/AddMosqueModal';
 import { Mosque, COUNTRY_CENTER, COUNTRY_NAME, isInBounds, getDistance } from './types';
 import { mosqueService } from './services/mosqueService';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
-import { Search, Navigation, Plus, Eye, EyeOff, MapPin, MapPinned } from 'lucide-react';
+import { Search, Navigation, Plus, Eye, EyeOff, MapPin, MapPinned, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import MosquePopup from './components/MosquePopup';
 import MosqueList from './components/MosqueList';
+import SavedView from './components/SavedView';
 import SettingsModal from './components/SettingsModal';
 import { Map as MapIcon, List, Bookmark, Settings } from 'lucide-react';
 
 export default function App() {
   const [mapCenter, setMapCenter] = useState<[number, number]>(COUNTRY_CENTER);
-  const [activeTab, setActiveTab] = useState<'map' | 'list'>('map');
+  const [activeTab, setActiveTab] = useState<'map' | 'list' | 'saved'>('map');
   const [searchRadius, setSearchRadius] = useState(500);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
@@ -29,6 +29,7 @@ export default function App() {
   const [lastFetchedLocation, setLastFetchedLocation] = useState<[number, number]>(COUNTRY_CENTER);
   const [lastFetchedRadius, setLastFetchedRadius] = useState(500);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
   const fetchIdRef = useRef(0);
   const [showLabels, setShowLabels] = useState(true);
   const [mosquesVisible, setMosquesVisible] = useState(true);
@@ -110,15 +111,17 @@ export default function App() {
     }
   }, [mapCenter, searchRadius]);
 
-  const fetchMosques = async (lat: number, lon: number, radius: number = searchRadius) => {
+  const fetchMosques = async (lat: number, lon: number, radius: number = searchRadius, forceRefresh: boolean = false) => {
     const currentFetchId = ++fetchIdRef.current;
     setLastFetchedLocation([lat, lon]);
     setLastFetchedRadius(radius);
-    if (isInitialLoading) setLoading(true);
+    
+    if (isInitialLoading || forceRefresh) setLoading(true);
+    setIsSyncing(true);
     
     // Reset mosques for the new location to avoid confusion, 
     // but we'll fill them back in incrementally
-    setMosques([]);
+    if (!forceRefresh) setMosques([]);
 
     const updateMosques = (newMosques: Mosque[]) => {
       if (currentFetchId !== fetchIdRef.current) return;
@@ -135,12 +138,22 @@ export default function App() {
     };
 
     try {
+      // 0. Instant search from Master List (Your "extra file" idea)
+      if (!forceRefresh) {
+        const masterResults = mosqueService.searchMasterList(lat, lon, radius);
+        if (masterResults.length > 0) {
+          updateMosques(masterResults);
+          setLoading(false);
+          setIsInitialLoading(false);
+        }
+      }
+
       // 1. Local mosques (Instant)
-      mosqueService.getLocalMosques().then(updateMosques);
+      const localPromise = forceRefresh ? Promise.resolve() : mosqueService.getLocalMosques().then(updateMosques);
 
       // 2. Supabase mosques (Fast)
-      if (isSupabaseConfigured) {
-        supabase
+      const supabasePromise = (isSupabaseConfigured && !forceRefresh)
+        ? supabase
           .from('mosques')
           .select('*')
           .gte('latitude', lat - 0.1)
@@ -149,20 +162,39 @@ export default function App() {
           .lte('longitude', lon + 0.1)
           .then(result => {
             if (result.data) updateMosques(result.data);
-          });
-      }
+          })
+        : Promise.resolve();
 
       // 3. OSM mosques (Slower)
-      // We await this one to know when we're truly "done" for the loading state
-      const osmData = await mosqueService.fetchNearbyFromOSM(lat, lon, radius);
-      updateMosques(osmData);
+      const osmPromise = mosqueService.fetchNearbyFromOSM(lat, lon, radius, forceRefresh)
+        .then(updateMosques);
+
+      // Hide initial loading screen as soon as local or supabase finish
+      // or after a short timeout (1s) to keep the app responsive
+      if (!forceRefresh) {
+        await Promise.race([
+          Promise.all([localPromise, supabasePromise]),
+          new Promise(resolve => setTimeout(resolve, 1000))
+        ]);
+      }
       
-    } catch (err) {
-      console.error('Fetch mosques error:', err);
-    } finally {
       if (currentFetchId === fetchIdRef.current) {
         setLoading(false);
         setIsInitialLoading(false);
+      }
+
+      // Wait for all remote fetches to complete to stop the syncing indicator
+      await Promise.allSettled([supabasePromise, osmPromise]);
+      if (currentFetchId === fetchIdRef.current) {
+        setIsSyncing(false);
+      }
+      
+    } catch (err) {
+      console.error('Fetch mosques error:', err);
+      if (currentFetchId === fetchIdRef.current) {
+        setLoading(false);
+        setIsInitialLoading(false);
+        setIsSyncing(false);
       }
     }
   };
@@ -343,10 +375,22 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* Next Jamat Radar */}
-      {!isAnyModalOpen && (
-        <Radar userLocation={userLocation || mapCenter} nearbyMosques={mosquesVisible ? mosques : []} />
-      )}
+      {/* Syncing Indicator */}
+      <AnimatePresence>
+        {isSyncing && !loading && !isAnyModalOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="absolute top-20 left-1/2 -translate-x-1/2 z-[600] pointer-events-none"
+          >
+            <div className="bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-lg border border-slate-100 flex items-center gap-2">
+              <div className="w-3 h-3 border-2 border-[#0F7A5C] border-t-transparent rounded-full animate-spin" />
+              <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Updating...</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Main Content Area */}
       <div className={`flex-1 relative ${isAddModalOpen ? 'z-[550]' : 'z-0'} overflow-hidden`}>
@@ -372,16 +416,19 @@ export default function App() {
                 isAdding={isAddModalOpen}
               />
 
-              {/* Map Target Indicator (Minimalistic) */}
+              {/* Map Target Indicator (Vibrant) */}
               {!selectedMosque && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[800]">
-                  <div className="relative w-8 h-8 flex items-center justify-center">
-                    {/* Simple Crosshair */}
-                    <div className={`absolute w-full h-[1px] transition-colors ${isAddModalOpen ? 'bg-amber-500' : 'bg-slate-400/50'}`}></div>
-                    <div className={`absolute h-full w-[1px] transition-colors ${isAddModalOpen ? 'bg-amber-500' : 'bg-slate-400/50'}`}></div>
+                  <div className="relative w-12 h-12 flex items-center justify-center">
+                    {/* Pulsing Ring */}
+                    <div className={`absolute w-full h-full rounded-full border-2 animate-pulse transition-colors ${isAddModalOpen ? 'border-amber-400/40' : 'border-emerald-400/40'}`}></div>
+                    
+                    {/* Crosshair Lines */}
+                    <div className={`absolute w-full h-[2px] transition-colors ${isAddModalOpen ? 'bg-amber-500' : 'bg-emerald-500'}`}></div>
+                    <div className={`absolute h-full w-[2px] transition-colors ${isAddModalOpen ? 'bg-amber-500' : 'bg-emerald-500'}`}></div>
                     
                     {/* Center Dot */}
-                    <div className={`w-1.5 h-1.5 rounded-full transition-colors ${isAddModalOpen ? 'bg-amber-500' : 'bg-slate-400/50'}`}></div>
+                    <div className={`w-3 h-3 rounded-full border-2 border-white shadow-lg transition-colors ${isAddModalOpen ? 'bg-amber-500' : 'bg-emerald-500'}`}></div>
 
                     <AnimatePresence>
                       {isAddModalOpen && (
@@ -389,9 +436,9 @@ export default function App() {
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: 10 }}
-                          className="absolute top-10 bg-amber-500 text-white text-[9px] font-bold px-2 py-1 rounded-md uppercase tracking-widest whitespace-nowrap shadow-lg"
+                          className="absolute top-12 bg-amber-500 text-white text-[10px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest whitespace-nowrap shadow-xl border-2 border-white"
                         >
-                          Pin Location
+                          Pin Mosque Here
                         </motion.div>
                       )}
                     </AnimatePresence>
@@ -438,6 +485,18 @@ export default function App() {
                     </motion.button>
                     <motion.button
                       whileTap={{ scale: 0.9 }}
+                      onClick={() => fetchMosques(mapCenter[0], mapCenter[1], searchRadius, true)}
+                      disabled={isSyncing}
+                      className={`h-12 px-4 rounded-2xl shadow-xl flex items-center gap-2 border border-slate-100 font-bold text-sm transition-all ${
+                        isSyncing ? 'bg-slate-50 text-slate-400' : 'bg-white text-[#0F7A5C]'
+                      }`}
+                      title="Refresh from OSM"
+                    >
+                      <RefreshCw className={`w-5 h-5 ${isSyncing ? 'animate-spin' : ''}`} />
+                      {isSyncing ? 'Refreshing...' : 'Refresh OSM'}
+                    </motion.button>
+                    <motion.button
+                      whileTap={{ scale: 0.9 }}
                       onClick={handleRecenter}
                       disabled={isLocating}
                       className={`h-12 px-4 rounded-2xl shadow-xl flex items-center gap-2 border border-slate-100 font-bold text-sm transition-all ${
@@ -459,7 +518,7 @@ export default function App() {
                 )}
               </AnimatePresence>
             </motion.div>
-          ) : (
+          ) : activeTab === 'list' ? (
             <motion.div
               key="list"
               initial={{ x: 20, opacity: 0 }}
@@ -479,6 +538,22 @@ export default function App() {
                   setActiveTab('map');
                 }} 
               />
+            </motion.div>
+          ) : (
+            <motion.div
+              key="saved"
+              initial={{ x: 20, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: 20, opacity: 0 }}
+              transition={{ type: "spring", damping: 25, stiffness: 200 }}
+              className="absolute inset-0 flex flex-col"
+            >
+              <SavedView onSelectMosque={(m) => {
+                setMapCenter([m.latitude, m.longitude]);
+                setForceRecenter(prev => prev + 1);
+                setActiveTab('map');
+                setSelectedMosque(m);
+              }} />
             </motion.div>
           )}
         </AnimatePresence>
@@ -502,9 +577,12 @@ export default function App() {
           <List className="w-5 h-5 mb-0.5" />
           <span className="text-[10px] font-bold uppercase tracking-widest">List</span>
         </button>
-        <button className="flex flex-col items-center gap-1 text-slate-400 opacity-50 cursor-not-allowed">
-          <div className="w-1.5 h-1.5 rounded-full bg-transparent"></div>
-          <Bookmark className="w-5 h-5 mb-0.5" />
+        <button 
+          onClick={() => setActiveTab('saved')}
+          className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'saved' ? 'text-[#0F7A5C]' : 'text-slate-400'}`}
+        >
+          <div className={`w-1.5 h-1.5 rounded-full transition-all ${activeTab === 'saved' ? 'bg-[#0F7A5C] scale-100' : 'bg-transparent scale-0'}`}></div>
+          <Bookmark className={`w-5 h-5 mb-0.5 ${activeTab === 'saved' ? 'fill-current' : ''}`} />
           <span className="text-[10px] font-bold uppercase tracking-widest">Saved</span>
         </button>
         <button 

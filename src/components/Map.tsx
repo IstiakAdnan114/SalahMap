@@ -89,23 +89,44 @@ function RecenterMap({ center, force }: { center: [number, number], force: numbe
 
 const MosqueIcon = L.icon({
   iconUrl: `data:image/svg+xml;base64,${btoa(`
-    <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <circle cx="12" cy="12" r="11" fill="#0F7A5C" />
-      <path d="M3 21h18" stroke="white"/>
-      <path d="M10 21V10a2 2 0 0 1 4 0v11" stroke="white"/>
-      <path d="M4 21V10a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v11" stroke="white"/>
-      <path d="M9 8V4a2 2 0 0 1 4 0v4" stroke="white"/>
+    <svg xmlns="http://www.w3.org/2000/svg" width="44" height="44" viewBox="0 0 44 44" fill="none">
+      <defs>
+        <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur in="SourceAlpha" stdDeviation="2" />
+          <feOffset dx="0" dy="2" result="offsetblur" />
+          <feComponentTransfer>
+            <feFuncA type="linear" slope="0.3" />
+          </feComponentTransfer>
+          <feMerge>
+            <feMergeNode />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+      <circle cx="22" cy="22" r="18" fill="#10B981" filter="url(#shadow)" stroke="white" stroke-width="2" />
+      <g transform="translate(10, 10) scale(0.8)">
+        <path d="M3 21h18" stroke="white" stroke-width="2" stroke-linecap="round"/>
+        <path d="M10 21V10a2 2 0 0 1 4 0v11" stroke="white" stroke-width="2" stroke-linecap="round"/>
+        <path d="M4 21V10a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v11" stroke="white" stroke-width="2" stroke-linecap="round"/>
+        <path d="M9 8V4a2 2 0 0 1 4 0v4" stroke="white" stroke-width="2" stroke-linecap="round"/>
+      </g>
     </svg>
   `)}`,
-  iconSize: [36, 36],
-  iconAnchor: [18, 18],
-  popupAnchor: [0, -18],
+  iconSize: [44, 44],
+  iconAnchor: [22, 22],
+  popupAnchor: [0, -22],
 });
 
 const UserLocationIcon = L.divIcon({
-  className: 'bg-blue-500 w-3 h-3 rounded-full border-2 border-white box-border shadow-sm',
-  iconSize: [12, 12],
-  iconAnchor: [6, 6],
+  className: 'user-location-marker',
+  html: `
+    <div class="relative flex items-center justify-center">
+      <div class="absolute w-6 h-6 bg-blue-500 rounded-full animate-ping opacity-20"></div>
+      <div class="relative w-4 h-4 bg-blue-600 rounded-full border-2 border-white shadow-lg"></div>
+    </div>
+  `,
+  iconSize: [24, 24],
+  iconAnchor: [12, 12],
 });
 
 const Map: React.FC<MapProps & { forceRecenter?: number }> = ({ center, userLocation, mosques, showLabels = true, onMosqueSelect, onCenterChange, onDeleteMosque, forceRecenter = 0, isAdding = false }) => {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Mosque, PrayerTimes } from '../types';
 import { mosqueService } from '../services/mosqueService';
-import { ThumbsUp, ThumbsDown, Clock, MapPin, CheckCircle2, AlertCircle, Trash2, Save, X as CloseIcon } from 'lucide-react';
+import { ThumbsUp, ThumbsDown, Clock, MapPin, CheckCircle2, AlertCircle, Trash2, Save, X as CloseIcon, Heart, Navigation } from 'lucide-react';
 import { format } from 'date-fns';
 import { supabase } from '../lib/supabase';
 
@@ -23,6 +23,7 @@ const MosquePopup: React.FC<MosquePopupProps> = ({ mosque, onClose, onDelete, on
   const [isEditingName, setIsEditingName] = useState(false);
   const [editedName, setEditedName] = useState(mosque.name);
   const [isSavingName, setIsSavingName] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -37,7 +38,18 @@ const MosquePopup: React.FC<MosquePopupProps> = ({ mosque, onClose, onDelete, on
     loadTimes();
     setEditedName(mosque.name);
     setIsEditingName(false);
+    checkFavorite();
   }, [mosque.id, mosque.name]);
+
+  const checkFavorite = async () => {
+    const fav = await mosqueService.isFavorite(mosque.id);
+    setIsFavorite(fav);
+  };
+
+  const handleToggleFavorite = async () => {
+    const added = await mosqueService.toggleFavorite(mosque);
+    setIsFavorite(added);
+  };
 
   const loadTimes = async (silent = false) => {
     if (!silent) setLoading(true);
@@ -224,7 +236,7 @@ const MosquePopup: React.FC<MosquePopupProps> = ({ mosque, onClose, onDelete, on
   };
 
   return (
-    <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 sm:p-6">
+    <div className="fixed inset-0 z-[800] flex items-center justify-center p-4 sm:p-6">
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" 
@@ -281,12 +293,33 @@ const MosquePopup: React.FC<MosquePopupProps> = ({ mosque, onClose, onDelete, on
                   >
                     <Save className="w-4 h-4" />
                   </button>
+                  <button 
+                    onClick={handleToggleFavorite}
+                    className={`ml-auto p-2 rounded-xl transition-all ${isFavorite ? 'bg-rose-50 text-rose-500 shadow-sm' : 'bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-400'}`}
+                    title={isFavorite ? "Remove from favorites" : "Save to favorites"}
+                  >
+                    <Heart className={`w-5 h-5 ${isFavorite ? 'fill-current' : ''}`} />
+                  </button>
                 </div>
               )}
               <div className="flex items-center text-sm text-slate-500 mt-2">
                 <MapPin className="w-4 h-4 mr-1.5 text-slate-400" />
                 <span className="line-clamp-1">{mosque.address}</span>
               </div>
+              
+              {/* Take Me There Button */}
+              {mosque.latitude && mosque.longitude && (
+                <button
+                  onClick={() => {
+                    const url = `https://www.google.com/maps/dir/?api=1&destination=${mosque.latitude},${mosque.longitude}`;
+                    window.open(url, '_blank', 'noopener,noreferrer');
+                  }}
+                  className="mt-4 w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-200 hover:bg-blue-700 active:scale-[0.98] transition-all"
+                >
+                  <Navigation className="w-4 h-4 fill-current" />
+                  Take Me There
+                </button>
+              )}
             </div>
             <div className="flex gap-2">
               {!mosque.id.startsWith('osm-') && (
@@ -379,18 +412,18 @@ const MosquePopup: React.FC<MosquePopupProps> = ({ mosque, onClose, onDelete, on
                                 UNRELIABLE
                               </div>
                             )}
-                            <div className={`text-[10px] font-black px-2 py-1 rounded-lg ${p.score >= 3 ? 'bg-emerald-100 text-emerald-700' : p.score <= -3 ? 'bg-rose-100 text-rose-700' : 'bg-slate-200 text-slate-600'}`}>
-                              {p.score > 0 ? `+${p.score}` : (p.score || 0)}
+                            <div className={`text-[9px] font-black px-2 py-1 rounded-lg ${total > 0 ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-500'}`}>
+                              {Math.round(confidence)}% CONFIDENCE
                             </div>
                           </div>
                           <div className="text-[10px] text-slate-400 font-bold">
-                            {p.up} Correct · {p.down} Incorrect
+                            {total} Total {total === 1 ? 'Vote' : 'Votes'} · {p.up} ↑ · {p.down} ↓
                           </div>
                         </div>
                       </div>
 
                       {/* Confidence Bar */}
-                      <div className="h-1.5 w-full bg-slate-200 rounded-full overflow-hidden mb-5">
+                      <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden mb-5 shadow-inner">
                         <div 
                           className={`h-full transition-all duration-700 ease-out ${p.score >= 3 ? 'bg-emerald-500' : p.score <= -3 ? 'bg-rose-500' : 'bg-indigo-500'}`}
                           style={{ width: `${confidence}%` }}

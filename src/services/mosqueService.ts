@@ -1,8 +1,9 @@
-import { Mosque, PrayerTimes } from '../types';
+import { Mosque, PrayerTimes, getDistance } from '../types';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 const LOCAL_MOSQUES_KEY = 'mosque_finder_local_mosques';
 const LOCAL_TIMES_KEY = 'mosque_finder_local_times';
+const LOCAL_FAVORITES_KEY = 'mosque_finder_favorites';
 const DEVICE_ID_KEY = 'mosque_finder_device_id';
 
 const getDeviceId = () => {
@@ -24,21 +25,104 @@ const getDeviceId = () => {
 
 // Simple in-memory cache for OSM results
 const osmCache = new Map<string, { data: Mosque[], timestamp: number }>();
-const CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutes
+
+// Load cache from localStorage on initialization
+try {
+  const savedCache = localStorage.getItem('mosque_finder_osm_cache');
+  if (savedCache) {
+    const parsed = JSON.parse(savedCache);
+    Object.entries(parsed).forEach(([key, value]: [string, any]) => {
+      osmCache.set(key, value);
+    });
+  }
+} catch (e) {
+  console.error('Error loading OSM cache:', e);
+}
+
+const saveCacheToLocal = () => {
+  try {
+    const obj: Record<string, any> = {};
+    osmCache.forEach((value, key) => {
+      obj[key] = value;
+    });
+    localStorage.setItem('mosque_finder_osm_cache', JSON.stringify(obj));
+  } catch (e) {
+    console.error('Error saving OSM cache:', e);
+  }
+};
+
+// Master List for all mosques encountered
+let masterMosqueList: Mosque[] = [];
+const MASTER_LIST_KEY = 'mosque_finder_master_list';
+
+// Load master list from localStorage
+try {
+  const savedMaster = localStorage.getItem(MASTER_LIST_KEY);
+  if (savedMaster) {
+    masterMosqueList = JSON.parse(savedMaster);
+  }
+} catch (e) {
+  console.error('Error loading Master List:', e);
+}
+
+const saveMasterList = () => {
+  try {
+    // Keep only unique mosques by ID
+    const unique = masterMosqueList.filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
+    masterMosqueList = unique;
+    localStorage.setItem(MASTER_LIST_KEY, JSON.stringify(masterMosqueList));
+  } catch (e) {
+    console.error('Error saving Master List:', e);
+  }
+};
 
 export const mosqueService = {
-  async fetchNearbyFromOSM(lat: number, lon: number, radius: number = 500): Promise<Mosque[]> {
-    // Round coordinates to ~100m to increase cache hits
-    const cacheKey = `${lat.toFixed(3)}_${lon.toFixed(3)}_${radius}`;
-    const cached = osmCache.get(cacheKey);
-    if (cached && Date.now() - cached.timestamp < CACHE_EXPIRY) {
-      console.log('Returning cached OSM data');
-      return cached.data;
+  // New method to search the local master list instantly
+  searchMasterList(lat: number, lon: number, radiusMeters: number): Mosque[] {
+    return masterMosqueList.filter(m => {
+      const dist = getDistance(lat, lon, m.latitude, m.longitude);
+      return dist * 1000 <= radiusMeters;
+    });
+  },
+
+  // Add mosques to the master list
+  addToMasterList(mosques: Mosque[]) {
+    masterMosqueList = [...masterMosqueList, ...mosques];
+    saveMasterList();
+  },
+
+  async fetchNearbyFromOSM(lat: number, lon: number, radius: number = 500, forceRefresh: boolean = false): Promise<Mosque[]> {
+    // Round coordinates to ~50m to increase cache hits (0.0005 is roughly 50m)
+    const cacheKey = `${lat.toFixed(4)}_${lon.toFixed(4)}_${radius}`;
+    
+    if (!forceRefresh) {
+      // 1. Check permanent cache
+      const cached = osmCache.get(cacheKey);
+      if (cached) {
+        console.log('Returning cached OSM data (Permanent)');
+        return cached.data;
+      }
+
+      // 2. Check if master list already has 5+ mosques in this area
+      // This fulfills the requirement: "Skip the OSM call entirely if the master list already has 5 or more mosques"
+      const localResults = this.searchMasterList(lat, lon, radius);
+      if (localResults.length >= 5) {
+        console.log('Skipping OSM call: Master list already has 5+ mosques');
+        // Still mark as cached so we don't keep checking this area
+        osmCache.set(cacheKey, { data: localResults, timestamp: Date.now() });
+        saveCacheToLocal();
+        return localResults;
+      }
     }
 
+    // Faster query: limit to nodes and ways (relations are rare for mosques and slow to process)
+    // Also use a shorter timeout
     const query = `
-      [out:json][timeout:10];
-      nwr["amenity"="place_of_worship"]["religion"="muslim"](around:${radius},${lat},${lon});
+      [out:json][timeout:5];
+      (
+        node["amenity"="place_of_worship"]["religion"="muslim"](around:${radius},${lat},${lon});
+        way["amenity"="place_of_worship"]["religion"="muslim"](around:${radius},${lat},${lon});
+      );
       out center;
     `;
     
@@ -88,6 +172,10 @@ export const mosqueService = {
 
         // Cache the result
         osmCache.set(cacheKey, { data: mosques, timestamp: Date.now() });
+        saveCacheToLocal();
+        
+        // Add to master list
+        this.addToMasterList(mosques);
         
         return mosques;
       } catch (error) {
@@ -469,7 +557,10 @@ export const mosqueService = {
           .select()
           .single();
 
-        if (!error) return data;
+        if (!error) {
+          this.addToMasterList([data]);
+          return data;
+        }
         console.error('Supabase create mosque error:', error);
       } catch (e) {
         console.error('Supabase error:', e);
@@ -484,6 +575,7 @@ export const mosqueService = {
     const localMosques = JSON.parse(localStorage.getItem(LOCAL_MOSQUES_KEY) || '[]');
     localMosques.push(newMosque);
     localStorage.setItem(LOCAL_MOSQUES_KEY, JSON.stringify(localMosques));
+    this.addToMasterList([newMosque]);
     return newMosque;
   },
 
@@ -508,6 +600,27 @@ export const mosqueService = {
     const filtered = localMosques.filter((m: Mosque) => m.id !== id);
     localStorage.setItem(LOCAL_MOSQUES_KEY, JSON.stringify(filtered));
     return true;
+  },
+
+  async toggleFavorite(mosque: Mosque) {
+    const favorites = JSON.parse(localStorage.getItem(LOCAL_FAVORITES_KEY) || '[]');
+    const index = favorites.findIndex((m: Mosque) => m.id === mosque.id);
+    if (index === -1) {
+      favorites.push(mosque);
+    } else {
+      favorites.splice(index, 1);
+    }
+    localStorage.setItem(LOCAL_FAVORITES_KEY, JSON.stringify(favorites));
+    return index === -1; // returns true if added, false if removed
+  },
+
+  async getFavorites(): Promise<Mosque[]> {
+    return JSON.parse(localStorage.getItem(LOCAL_FAVORITES_KEY) || '[]');
+  },
+
+  async isFavorite(id: string): Promise<boolean> {
+    const favorites = JSON.parse(localStorage.getItem(LOCAL_FAVORITES_KEY) || '[]');
+    return favorites.some((m: Mosque) => m.id === id);
   },
 
   async updateMosque(id: string, updates: Partial<Mosque>) {
