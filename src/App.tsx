@@ -127,10 +127,21 @@ export default function App() {
       if (currentFetchId !== fetchIdRef.current) return;
       
       setMosques(prev => {
-        const combined = [...prev, ...newMosques];
-        // Filter duplicates and radius
-        const unique = combined.filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
-        return unique.filter(m => {
+        const removedIds = JSON.parse(localStorage.getItem('mosque_finder_removed_ids') || '[]');
+        
+        // Strategy: We want LATEST data to win.
+        // We put newMosques first so they overwrite older data in the combined list
+        const combined = [...newMosques, ...prev];
+        
+        // Filter out blacklisted ones and duplicates
+        // Duplicates: findIndex will pick the one at the start of the array, which is from newMosques
+        const filtered = combined.filter((m, i, a) => {
+          if (removedIds.includes(m.id)) return false;
+          return a.findIndex(t => t.id === m.id) === i;
+        });
+
+        // Finally filter by radius
+        return filtered.filter(m => {
           const dist = getDistance(lat, lon, m.latitude, m.longitude);
           return dist * 1000 <= radius;
         });
@@ -287,18 +298,21 @@ export default function App() {
   };
 
   const handleUpdateMosque = async (id: string, updates: Partial<Mosque>) => {
-    // Optimistic update
-    setMosques(prev => prev.map(m => m.id === id ? { ...m, ...updates } : m));
+    // 1. Calculate the updated object using the latest available data
+    const current = mosques.find(m => m.id === id) || (selectedMosque?.id === id ? selectedMosque : null);
+    if (!current) return;
+    
+    const fullyUpdated = { ...current, ...updates };
+
+    // 2. Optimistic update in UI
+    setMosques(prev => prev.map(m => m.id === id ? fullyUpdated : m));
     if (selectedMosque && selectedMosque.id === id) {
-      setSelectedMosque({ ...selectedMosque, ...updates });
+      setSelectedMosque(fullyUpdated);
     }
 
     try {
-      // Find the current mosque to send full data for upsert if needed
-      const current = mosques.find(m => m.id === id) || selectedMosque;
-      if (current) {
-        await mosqueService.updateMosque(id, { ...current, ...updates });
-      }
+      // 3. Persist to database
+      await mosqueService.updateMosque(id, fullyUpdated);
     } catch (error) {
       console.error('Failed to persist mosque update:', error);
     }

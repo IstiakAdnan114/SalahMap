@@ -69,8 +69,11 @@ try {
 const saveMasterList = () => {
   try {
     // Keep only unique mosques by ID
-    const unique = masterMosqueList.filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
-    masterMosqueList = unique;
+    // We reverse the list first so that findIndex finds the LATEST (most recently added/edited) version
+    const reversed = [...masterMosqueList].reverse();
+    const unique = reversed.filter((v, i, a) => a.findIndex(t => t.id === v.id) === i);
+    // Reverse back to maintain some semblance of order if needed, or just use as is
+    masterMosqueList = unique.reverse();
     localStorage.setItem(MASTER_LIST_KEY, JSON.stringify(masterMosqueList));
   } catch (e) {
     console.error('Error saving Master List:', e);
@@ -80,7 +83,9 @@ const saveMasterList = () => {
 export const mosqueService = {
   // New method to search the local master list instantly
   searchMasterList(lat: number, lon: number, radiusMeters: number): Mosque[] {
+    const removedIds = JSON.parse(localStorage.getItem(LOCAL_REMOVED_KEY) || '[]');
     return masterMosqueList.filter(m => {
+      if (removedIds.includes(m.id)) return false;
       const dist = getDistance(lat, lon, m.latitude, m.longitude);
       return dist * 1000 <= radiusMeters;
     });
@@ -593,8 +598,14 @@ export const mosqueService = {
       localStorage.setItem(LOCAL_REMOVED_KEY, JSON.stringify(removedIds));
     }
 
-    if (isSupabaseConfigured && !id.startsWith('osm-')) {
+    // Remove from in-memory master list immediately
+    masterMosqueList = masterMosqueList.filter(m => m.id !== id);
+    saveMasterList();
+
+    if (isSupabaseConfigured) {
       try {
+        // Delete from Supabase. Even if it started as OSM, if it was edited it exists in our DB.
+        // If it wasn't edited, this will just do nothing, which is fine.
         const { error } = await supabase
           .from('mosques')
           .delete()
@@ -675,7 +686,9 @@ export const mosqueService = {
   },
 
   async getLocalMosques(): Promise<Mosque[]> {
-    return JSON.parse(localStorage.getItem(LOCAL_MOSQUES_KEY) || '[]');
+    const removedIds = JSON.parse(localStorage.getItem(LOCAL_REMOVED_KEY) || '[]');
+    const local = JSON.parse(localStorage.getItem(LOCAL_MOSQUES_KEY) || '[]');
+    return local.filter((m: Mosque) => !removedIds.includes(m.id));
   },
 
   async getUserVotes(mosqueId: string, userId?: string) {
