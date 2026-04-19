@@ -85,7 +85,7 @@ export const mosqueService = {
   searchMasterList(lat: number, lon: number, radiusMeters: number): Mosque[] {
     const removedIds = JSON.parse(localStorage.getItem(LOCAL_REMOVED_KEY) || '[]');
     return masterMosqueList.filter(m => {
-      if (removedIds.includes(m.id)) return false;
+      if (removedIds.includes(m.id) || m.is_deleted) return false;
       const dist = getDistance(lat, lon, m.latitude, m.longitude);
       return dist * 1000 <= radiusMeters;
     });
@@ -591,7 +591,7 @@ export const mosqueService = {
   },
 
   async deleteMosque(id: string) {
-    // Hidden blacklist to prevent OSM data from reappearing
+    // Hidden blacklist to prevent OSM data from reappearing locally immediately
     const removedIds = JSON.parse(localStorage.getItem(LOCAL_REMOVED_KEY) || '[]');
     if (!removedIds.includes(id)) {
       removedIds.push(id);
@@ -604,12 +604,11 @@ export const mosqueService = {
 
     if (isSupabaseConfigured) {
       try {
-        // Delete from Supabase. Even if it started as OSM, if it was edited it exists in our DB.
-        // If it wasn't edited, this will just do nothing, which is fine.
+        // Soft delete for community syncing: mark as is_deleted instead of hard deleting
+        // This ensures other users' apps will see it as deleted when they refresh.
         const { error } = await supabase
           .from('mosques')
-          .delete()
-          .eq('id', id);
+          .upsert({ id, is_deleted: true }, { onConflict: 'id' });
 
         if (error) console.error('Supabase delete error:', error);
       } catch (e) {
@@ -688,7 +687,7 @@ export const mosqueService = {
   async getLocalMosques(): Promise<Mosque[]> {
     const removedIds = JSON.parse(localStorage.getItem(LOCAL_REMOVED_KEY) || '[]');
     const local = JSON.parse(localStorage.getItem(LOCAL_MOSQUES_KEY) || '[]');
-    return local.filter((m: Mosque) => !removedIds.includes(m.id));
+    return local.filter((m: Mosque) => !removedIds.includes(m.id) && !m.is_deleted);
   },
 
   async getUserVotes(mosqueId: string, userId?: string) {

@@ -5,6 +5,7 @@ export interface Mosque {
   longitude: number;
   address?: string;
   distance?: number;
+  is_deleted?: boolean;
 }
 
 export interface PrayerTimes {

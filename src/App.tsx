@@ -136,7 +136,7 @@ export default function App() {
         // Filter out blacklisted ones and duplicates
         // Duplicates: findIndex will pick the one at the start of the array, which is from newMosques
         const filtered = combined.filter((m, i, a) => {
-          if (removedIds.includes(m.id)) return false;
+          if (removedIds.includes(m.id) || m.is_deleted) return false;
           return a.findIndex(t => t.id === m.id) === i;
         });
 
