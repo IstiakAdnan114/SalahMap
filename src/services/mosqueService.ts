@@ -627,23 +627,24 @@ export const mosqueService = {
   },
 
   async updateMosque(id: string, updates: Partial<Mosque>) {
-    if (isSupabaseConfigured && !id.startsWith('osm-')) {
+    if (isSupabaseConfigured) {
       try {
+        // If it's an OSM mosque being updated for the first time, we need to UPSERT it
+        // so it becomes a "community" mosque in our database.
         const { data, error } = await supabase
           .from('mosques')
-          .update(updates)
-          .eq('id', id)
+          .upsert({ ...updates, id: id }, { onConflict: 'id' })
           .select()
           .single();
 
         if (!error) return data;
-        console.error('Supabase update mosque error:', error);
+        console.error('Supabase sync mosque error:', error);
       } catch (e) {
         console.error('Supabase error:', e);
       }
     }
 
-    // Local update
+    // Local update fallback if Supabase is offline or fails
     const localMosques = JSON.parse(localStorage.getItem(LOCAL_MOSQUES_KEY) || '[]');
     const index = localMosques.findIndex((m: Mosque) => m.id === id);
     if (index !== -1) {

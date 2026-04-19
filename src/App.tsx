@@ -4,7 +4,7 @@ import AddMosqueModal from './components/AddMosqueModal';
 import { Mosque, COUNTRY_CENTER, COUNTRY_NAME, isInBounds, getDistance } from './types';
 import { mosqueService } from './services/mosqueService';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
-import { Search, Navigation, Plus, Eye, EyeOff, MapPin, MapPinned, RefreshCw } from 'lucide-react';
+import { Search, Navigation, Plus, Eye, EyeOff, MapPin, MapPinned, RefreshCw, Cloud, CloudOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import MosquePopup from './components/MosquePopup';
 import MosqueList from './components/MosqueList';
@@ -343,7 +343,39 @@ export default function App() {
 
       {/* Geolocation Status Banner */}
       <AnimatePresence>
-        {geoStatus !== 'granted' && geoStatus !== 'prompt' && !isAnyModalOpen && (
+        {!isSupabaseConfigured && !isAnyModalOpen && (
+          <motion.div
+            initial={{ y: -50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: -50, opacity: 0 }}
+            className="absolute top-20 left-4 right-4 z-[400] pointer-events-none"
+          >
+            <div className="max-w-md mx-auto bg-slate-50 border border-slate-200 rounded-xl p-3 shadow-lg flex items-center gap-3 pointer-events-auto">
+              <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 shrink-0">
+                <CloudOff className="w-4 h-4" />
+              </div>
+              <div className="flex-1">
+                <p className="text-xs font-bold text-slate-900 uppercase tracking-wider">Local Mode Active</p>
+                <p className="text-[10px] text-slate-500 font-medium">
+                  Database keys are missing on this device. Changes will not sync.
+                  <button 
+                    onClick={() => alert("To fix this:\n1. Open Vercel/Netlify Dashboard\n2. Go to Settings > Environment Variables\n3. Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY")}
+                    className="ml-2 text-[#0F7A5C] underline font-bold"
+                  >
+                    How to fix?
+                  </button>
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-slate-400"></div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {geoStatus !== 'granted' && geoStatus !== 'prompt' && !isAnyModalOpen && isSupabaseConfigured && (
           <motion.div
             initial={{ y: -50, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
