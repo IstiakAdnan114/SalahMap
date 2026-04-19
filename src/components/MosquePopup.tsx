@@ -204,9 +204,10 @@ const MosquePopup: React.FC<MosquePopupProps> = ({ mosque, onClose, onDelete, on
 
     setIsSavingName(true);
     try {
-      await mosqueService.updateMosque(mosque.id, { name: editedName });
       if (onUpdate) {
-        onUpdate(mosque.id, { name: editedName });
+        await onUpdate(mosque.id, { name: editedName });
+      } else {
+        await mosqueService.updateMosque(mosque.id, { ...mosque, name: editedName });
       }
       setIsEditingName(false);
     } catch (error) {

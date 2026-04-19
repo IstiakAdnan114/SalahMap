@@ -4,6 +4,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase';
 const LOCAL_MOSQUES_KEY = 'mosque_finder_local_mosques';
 const LOCAL_TIMES_KEY = 'mosque_finder_local_times';
 const LOCAL_FAVORITES_KEY = 'mosque_finder_favorites';
+const LOCAL_REMOVED_KEY = 'mosque_finder_removed_ids';
 const DEVICE_ID_KEY = 'mosque_finder_device_id';
 
 const getDeviceId = () => {
@@ -92,6 +93,7 @@ export const mosqueService = {
   },
 
   async fetchNearbyFromOSM(lat: number, lon: number, radius: number = 500, forceRefresh: boolean = false): Promise<Mosque[]> {
+    const removedIds = JSON.parse(localStorage.getItem(LOCAL_REMOVED_KEY) || '[]');
     // Round coordinates to ~50m to increase cache hits (0.0005 is roughly 50m)
     const cacheKey = `${lat.toFixed(4)}_${lon.toFixed(4)}_${radius}`;
     
@@ -100,7 +102,7 @@ export const mosqueService = {
       const cached = osmCache.get(cacheKey);
       if (cached) {
         console.log('Returning cached OSM data (Permanent)');
-        return cached.data;
+        return cached.data.filter(m => !removedIds.includes(m.id));
       }
 
       // 2. Check if master list already has 5+ mosques in this area
@@ -111,7 +113,7 @@ export const mosqueService = {
         // Still mark as cached so we don't keep checking this area
         osmCache.set(cacheKey, { data: localResults, timestamp: Date.now() });
         saveCacheToLocal();
-        return localResults;
+        return localResults.filter(m => !removedIds.includes(m.id));
       }
     }
 
@@ -177,7 +179,8 @@ export const mosqueService = {
         // Add to master list
         this.addToMasterList(mosques);
         
-        return mosques;
+        const removedIds = JSON.parse(localStorage.getItem(LOCAL_REMOVED_KEY) || '[]');
+        return mosques.filter(m => !removedIds.includes(m.id));
       } catch (error) {
         if (retryCount < 2) {
           const nextIndex = (endpointIndex + 1) % endpoints.length;
@@ -583,18 +586,23 @@ export const mosqueService = {
   },
 
   async deleteMosque(id: string) {
-    if (id.startsWith('osm-')) return true;
+    // Hidden blacklist to prevent OSM data from reappearing
+    const removedIds = JSON.parse(localStorage.getItem(LOCAL_REMOVED_KEY) || '[]');
+    if (!removedIds.includes(id)) {
+      removedIds.push(id);
+      localStorage.setItem(LOCAL_REMOVED_KEY, JSON.stringify(removedIds));
+    }
 
-    if (isSupabaseConfigured) {
+    if (isSupabaseConfigured && !id.startsWith('osm-')) {
       try {
         const { error } = await supabase
           .from('mosques')
           .delete()
           .eq('id', id);
 
-        if (!error) return true;
+        if (error) console.error('Supabase delete error:', error);
       } catch (e) {
-        console.error('Supabase delete error:', e);
+        console.error('Supabase delete catch:', e);
       }
     }
 
@@ -637,7 +645,11 @@ export const mosqueService = {
           .select()
           .single();
 
-        if (!error) return data;
+        if (!error) {
+          // If update succeeded, also update the master list and local cache
+          this.addToMasterList([data]);
+          return data;
+        }
         console.error('Supabase sync mosque error:', error);
       } catch (e) {
         console.error('Supabase error:', e);
@@ -650,13 +662,16 @@ export const mosqueService = {
     if (index !== -1) {
       localMosques[index] = { ...localMosques[index], ...updates };
       localStorage.setItem(LOCAL_MOSQUES_KEY, JSON.stringify(localMosques));
+      this.addToMasterList([localMosques[index]]);
       return localMosques[index];
     }
     
-    // If it's an OSM mosque being "updated" locally (since we can't update OSM)
-    // We treat it as a local override if we were building a more complex system,
-    // but for now let's just return the updated object as if it worked.
-    return { id, ...updates } as Mosque;
+    // If it's an OSM mosque being "updated" locally and doesn't exist in LOCAL_MOSQUES_KEY yet
+    const mosqueToSave = { id, ...updates } as Mosque;
+    localMosques.push(mosqueToSave);
+    localStorage.setItem(LOCAL_MOSQUES_KEY, JSON.stringify(localMosques));
+    this.addToMasterList([mosqueToSave]);
+    return mosqueToSave;
   },
 
   async getLocalMosques(): Promise<Mosque[]> {

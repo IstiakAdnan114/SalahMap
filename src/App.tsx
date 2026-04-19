@@ -286,10 +286,21 @@ export default function App() {
     }
   };
 
-  const handleUpdateMosque = (id: string, updates: Partial<Mosque>) => {
+  const handleUpdateMosque = async (id: string, updates: Partial<Mosque>) => {
+    // Optimistic update
     setMosques(prev => prev.map(m => m.id === id ? { ...m, ...updates } : m));
     if (selectedMosque && selectedMosque.id === id) {
       setSelectedMosque({ ...selectedMosque, ...updates });
+    }
+
+    try {
+      // Find the current mosque to send full data for upsert if needed
+      const current = mosques.find(m => m.id === id) || selectedMosque;
+      if (current) {
+        await mosqueService.updateMosque(id, { ...current, ...updates });
+      }
+    } catch (error) {
+      console.error('Failed to persist mosque update:', error);
     }
   };
 
