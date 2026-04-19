@@ -255,7 +255,10 @@ export const mosqueService = {
         }
         
         if (error) {
-          console.error('Error fetching prayer times:', error);
+          // Only log if it's not a configuration error (Invalid API Key)
+          if (!error.message?.includes('Invalid API key')) {
+            console.error('Error fetching prayer times:', error);
+          }
         } else if (!data) {
           // 2. No record exists. 
           // Note: ensureMosqueExists should have been called by the component
@@ -673,7 +676,9 @@ export const mosqueService = {
           .maybeSingle();
 
         if (ptError) {
-          console.error('Error fetching prayer times for user votes:', ptError);
+          if (!ptError.message?.includes('Invalid API key')) {
+            console.error('Error fetching prayer times for user votes:', ptError);
+          }
           return [];
         }
 

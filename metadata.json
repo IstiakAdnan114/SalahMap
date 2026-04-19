@@ -1,6 +1,6 @@
 {
-  "name": "Copy of SalahMap",
-  "description": "A community-driven platform to find nearby mosques and their congregational prayer (Jamat) times using OpenStreetMap and Supabase.",
+  "name": "SalahMap",
+  "description": "The community-driven guide to mosques and jamat times. Find nearby places of worship, contribute prayer times, and help fellow Muslims stay connected to their local masjid.",
   "requestFramePermissions": [
     "geolocation"
   ]

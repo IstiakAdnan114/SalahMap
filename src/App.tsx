@@ -620,21 +620,48 @@ export default function App() {
         onAdd={handleAddMosque}
       />
       {loading && mosques.length === 0 && (
-        <div className="absolute inset-0 z-[200] bg-white flex flex-col items-center justify-center p-8 text-center">
+        <motion.div 
+          initial={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="absolute inset-0 z-[1000] bg-white flex flex-col items-center justify-center p-8 text-center"
+        >
           <motion.div 
-            animate={{ rotate: 360 }}
-            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-            className="w-16 h-16 border-4 border-[#0F7A5C]/20 border-t-[#0F7A5C] rounded-full mb-6"
-          />
-          <h2 className="text-2xl font-black text-slate-900 mb-2">Finding Mosques</h2>
-          <p className="text-slate-500 max-w-xs mb-8">Scanning your area for the nearest places of worship...</p>
-          <button 
-            onClick={() => setLoading(false)}
-            className="px-6 py-2 bg-slate-100 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-200 transition-colors"
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ duration: 0.5 }}
+            className="flex flex-col items-center"
           >
-            Skip & Search Manually
-          </button>
-        </div>
+            <div className="w-24 h-24 bg-[#0F7A5C] rounded-3xl shadow-2xl shadow-emerald-200 flex items-center justify-center mb-8 relative">
+              <MapPinned className="w-12 h-12 text-white" />
+              <div className="absolute inset-0 rounded-3xl border-4 border-white/20 animate-ping opacity-20"></div>
+            </div>
+            
+            <h1 className="text-4xl font-black text-slate-900 mb-2 tracking-tight">SalahMap</h1>
+            <p className="text-slate-400 font-medium max-w-xs mb-12">Connecting the Ummah to the nearest Masjid</p>
+          </motion.div>
+
+          <div className="flex flex-col items-center gap-6">
+            <div className="flex items-center gap-3 bg-slate-50 px-4 py-2 rounded-full border border-slate-100">
+              <motion.div 
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                className="w-4 h-4 border-2 border-[#0F7A5C] border-t-transparent rounded-full"
+              />
+              <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Locating Mosques</span>
+            </div>
+
+            <button 
+              onClick={() => setLoading(false)}
+              className="px-8 py-3 bg-white text-slate-400 rounded-2xl font-bold text-xs uppercase tracking-widest border border-slate-100 hover:bg-slate-50 hover:text-slate-600 transition-all active:scale-95"
+            >
+              Skip to Map
+            </button>
+          </div>
+          
+          <div className="absolute bottom-12 left-0 right-0">
+            <p className="text-[10px] font-bold text-slate-300 uppercase tracking-[0.4em]">Community Driven</p>
+          </div>
+        </motion.div>
       )}
     </div>
   );
