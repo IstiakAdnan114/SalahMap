@@ -112,6 +112,10 @@ SalahMap is designed to be added to your home screen. It uses:
 - `safe-area-inset` CSS constants to avoid UI overlaps with phone notches.
 - `overscroll-behavior: none` to prevent unwanted browser bouncing.
 
+## 👨‍💻 Developer
+
+**Md. Istiak Adnan**
+
 ## 🤝 Contributing
 
 Contributions are welcome! Whether it's fixing a bug, adding a new feature, or improving the design, feel free to fork the repo and submit a PR.

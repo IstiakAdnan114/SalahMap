@@ -89,9 +89,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, radius, 
                     This app helps you find nearby mosques and accurate jamat times in Bangladesh. 
                     Data is sourced from OpenStreetMap and updated by the community.
                   </p>
-                  <div className="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Version</span>
-                    <span className="text-[10px] font-bold text-slate-600">1.2.0</span>
+                  <div className="mt-4 pt-4 border-t border-slate-100 space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Developer</span>
+                      <span className="text-[10px] font-bold text-slate-800">Md. Istiak Adnan</span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Version</span>
+                      <span className="text-[10px] font-bold text-slate-600">1.2.0</span>
+                    </div>
                   </div>
                 </div>
               </section>
