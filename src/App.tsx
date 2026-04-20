@@ -19,6 +19,7 @@ export default function App() {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [mosques, setMosques] = useState<Mosque[]>([]);
+  const [syncedDeletedIds, setSyncedDeletedIds] = useState<Set<string>>(new Set());
   useEffect(() => {
     console.log('Mosques state updated:', mosques.length);
   }, [mosques]);
@@ -126,8 +127,18 @@ export default function App() {
     const updateMosques = (newMosques: Mosque[]) => {
       if (currentFetchId !== fetchIdRef.current) return;
       
+      // Update our session-level blacklist with any deleted IDs found from Supabase
+      const deletedInBatch = newMosques.filter(m => m.is_deleted).map(m => m.id);
+      if (deletedInBatch.length > 0) {
+        setSyncedDeletedIds(prev => {
+          const next = new Set(prev);
+          deletedInBatch.forEach(id => next.add(id));
+          return next;
+        });
+      }
+
       setMosques(prev => {
-        const removedIds = JSON.parse(localStorage.getItem('mosque_finder_removed_ids') || '[]');
+        const localRemovedIds = JSON.parse(localStorage.getItem('mosque_finder_removed_ids') || '[]');
         
         // Strategy: We want LATEST data to win.
         // We put newMosques first so they overwrite older data in the combined list
@@ -136,7 +147,13 @@ export default function App() {
         // Filter out blacklisted ones and duplicates
         // Duplicates: findIndex will pick the one at the start of the array, which is from newMosques
         const filtered = combined.filter((m, i, a) => {
-          if (removedIds.includes(m.id) || m.is_deleted) return false;
+          // Rule 1: Don't show if locally deleted
+          if (localRemovedIds.includes(m.id)) return false;
+          // Rule 2: Don't show if this object says it is deleted
+          if (m.is_deleted) return false;
+          // Rule 3: Don't show if we previously discovered it was deleted in this session
+          if (syncedDeletedIds.has(m.id) || deletedInBatch.includes(m.id)) return false;
+
           return a.findIndex(t => t.id === m.id) === i;
         });
 
@@ -289,6 +306,8 @@ export default function App() {
 
   const handleDeleteMosque = async (id: string) => {
     try {
+      // Optimistically add to shared session blacklist
+      setSyncedDeletedIds(prev => new Set([...Array.from(prev), id]));
       await mosqueService.deleteMosque(id);
       setMosques(prev => prev.filter(m => m.id !== id));
     } catch (error) {
