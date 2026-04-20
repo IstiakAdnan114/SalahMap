@@ -267,53 +267,9 @@ export const mosqueService = {
           if (!error.message?.includes('Invalid API key')) {
             console.error('Error fetching prayer times:', error);
           }
-        } else if (!data) {
-          // 2. No record exists. 
-          // Note: ensureMosqueExists should have been called by the component
-          // but we'll try to insert default times anyway.
-          const defaultTimes = {
-            mosque_id: mosqueId,
-            fajr: '05:30',
-            dhuhr: '13:15',
-            asr: '16:45',
-            maghrib: '18:30',
-            isha: '20:00',
-            updated_at: new Date().toISOString(),
-            fajr_score: 0,
-            dhuhr_score: 0,
-            asr_score: 0,
-            maghrib_score: 0,
-            isha_score: 0,
-            fajr_upvotes: 0,
-            fajr_downvotes: 0,
-            dhuhr_upvotes: 0,
-            dhuhr_downvotes: 0,
-            asr_upvotes: 0,
-            asr_downvotes: 0,
-            maghrib_upvotes: 0,
-            maghrib_downvotes: 0,
-            isha_upvotes: 0,
-            isha_downvotes: 0
-          };
-          
-          const { data: newData, error: insertError } = await supabase
-            .from('prayer_times')
-            .insert([defaultTimes])
-            .select()
-            .maybeSingle();
-            
-          if (!insertError && newData) {
-            const prayers = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'] as const;
-            prayers.forEach(p => {
-              newData[`${p}_upvotes`] = 0;
-              newData[`${p}_downvotes`] = 0;
-              newData[`${p}_score`] = 0;
-            });
-            return newData;
-          } else if (insertError) {
-            console.error('Error creating default prayer times:', insertError);
-          }
         }
+        
+        return null;
       } catch (e) {
         console.error('Supabase getPrayerTimes error:', e);
       }

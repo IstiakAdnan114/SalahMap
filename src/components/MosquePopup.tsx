@@ -27,11 +27,11 @@ const MosquePopup: React.FC<MosquePopupProps> = ({ mosque, onClose, onDelete, on
   
   // Form state
   const [formData, setFormData] = useState({
-    fajr: '',
-    dhuhr: '',
-    asr: '',
-    maghrib: '',
-    isha: ''
+    fajr: '05:30',
+    dhuhr: '13:15',
+    asr: '16:45',
+    maghrib: '18:30',
+    isha: '20:00'
   });
 
   useEffect(() => {
