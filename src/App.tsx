@@ -306,9 +306,10 @@ export default function App() {
 
   const handleDeleteMosque = async (id: string) => {
     try {
+      const fullMosque = mosques.find(m => m.id === id) || (selectedMosque?.id === id ? selectedMosque : null);
       // Optimistically add to shared session blacklist
       setSyncedDeletedIds(prev => new Set([...Array.from(prev), id]));
-      await mosqueService.deleteMosque(id);
+      await mosqueService.deleteMosque(id, fullMosque || undefined);
       setMosques(prev => prev.filter(m => m.id !== id));
     } catch (error) {
       console.error('Error deleting mosque:', error);

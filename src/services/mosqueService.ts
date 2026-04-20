@@ -590,7 +590,7 @@ export const mosqueService = {
     return newMosque;
   },
 
-  async deleteMosque(id: string) {
+  async deleteMosque(id: string, fullMosque?: Mosque) {
     // Hidden blacklist to prevent OSM data from reappearing locally immediately
     const removedIds = JSON.parse(localStorage.getItem(LOCAL_REMOVED_KEY) || '[]');
     if (!removedIds.includes(id)) {
@@ -605,12 +605,26 @@ export const mosqueService = {
     if (isSupabaseConfigured) {
       try {
         // Soft delete for community syncing: mark as is_deleted instead of hard deleting
-        // This ensures other users' apps will see it as deleted when they refresh.
+        // We try to find it in our master list if fullMosque wasn't provided, to satisfy NOT NULL constraints on upsert
+        const mosqueToSync = fullMosque || masterMosqueList.find(m => m.id === id);
+        
+        const payload: any = { id, is_deleted: true };
+        if (mosqueToSync) {
+          payload.name = mosqueToSync.name;
+          payload.latitude = mosqueToSync.latitude;
+          payload.longitude = mosqueToSync.longitude;
+          payload.address = mosqueToSync.address;
+        }
+
         const { error } = await supabase
           .from('mosques')
-          .upsert({ id, is_deleted: true }, { onConflict: 'id' });
+          .upsert(payload, { onConflict: 'id' });
 
-        if (error) console.error('Supabase delete error:', error);
+        if (error) {
+          // If we failed because we don't have enough data to INSERT a new record, 
+          // we at least mark it deleted locally (done above).
+          console.error('Supabase soft-delete sync error:', error);
+        }
       } catch (e) {
         console.error('Supabase delete catch:', e);
       }
