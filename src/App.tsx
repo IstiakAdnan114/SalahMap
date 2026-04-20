@@ -362,9 +362,9 @@ export default function App() {
   };
 
   return (
-    <div className="h-screen w-screen bg-[#F8F9FA] overflow-hidden flex flex-col font-sans">
+    <div className="h-full w-full bg-[#F8F9FA] overflow-hidden flex flex-col font-sans">
       {/* Header / Search Bar */}
-      <div className="absolute top-0 left-0 right-0 z-[700] p-4 pointer-events-none">
+      <div className="absolute top-0 left-0 right-0 z-[700] p-4 pt-[calc(1rem+env(safe-area-inset-top))] pointer-events-none">
         <form onSubmit={handleSearch} className="max-w-md mx-auto flex gap-2 pointer-events-auto">
           <div className="flex-1 bg-white rounded-2xl shadow-xl flex items-center px-4 py-3 border border-slate-100">
             <Search className="w-5 h-5 text-slate-400 mr-3" />
@@ -393,7 +393,7 @@ export default function App() {
             initial={{ y: -50, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: -50, opacity: 0 }}
-            className="absolute top-20 left-4 right-4 z-[400] pointer-events-none"
+            className="absolute top-[calc(5rem+env(safe-area-inset-top))] left-4 right-4 z-[400] pointer-events-none"
           >
             <div className="max-w-md mx-auto bg-slate-50 border border-slate-200 rounded-xl p-3 shadow-lg flex items-center gap-3 pointer-events-auto">
               <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 shrink-0">
@@ -425,7 +425,7 @@ export default function App() {
             initial={{ y: -50, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: -50, opacity: 0 }}
-            className="absolute top-20 left-4 right-4 z-[400] pointer-events-none"
+            className="absolute top-[calc(5rem+env(safe-area-inset-top))] left-4 right-4 z-[400] pointer-events-none"
           >
             <div className="max-w-md mx-auto bg-amber-50 border border-amber-200 rounded-xl p-3 shadow-lg flex items-center gap-3 pointer-events-auto">
               <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
@@ -513,7 +513,7 @@ export default function App() {
                           initial={{ opacity: 0, y: 10 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: 10 }}
-                          className="absolute top-12 bg-amber-500 text-white text-[10px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest whitespace-nowrap shadow-xl border-2 border-white"
+                          className="absolute bottom-16 bg-amber-500 text-white text-[10px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest whitespace-nowrap shadow-xl border-2 border-white"
                         >
                           Pin Mosque Here
                         </motion.div>
@@ -529,7 +529,7 @@ export default function App() {
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.9 }}
-                    className="absolute bottom-24 right-4 z-10 flex flex-col gap-3 items-end"
+                    className="absolute bottom-[calc(6rem+env(safe-area-inset-bottom))] right-4 z-10 flex flex-col gap-3 items-end"
                   >
                     <div className="bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-sm border border-slate-100 text-[10px] font-mono text-slate-500 mb-1">
                       {mapCenter[0].toFixed(4)}, {mapCenter[1].toFixed(4)}
@@ -637,7 +637,7 @@ export default function App() {
       </div>
 
       {/* Bottom Navigation (Mobile) */}
-      <div className="bg-white border-t border-slate-100 px-6 py-4 flex justify-between items-center z-[700]">
+      <div className="bg-white border-t border-slate-100 px-6 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] flex justify-between items-center z-[700] shrink-0">
         <button 
           onClick={() => setActiveTab('map')}
           className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'map' ? 'text-[#0F7A5C]' : 'text-slate-400'}`}

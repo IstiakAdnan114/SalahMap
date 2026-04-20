@@ -46,7 +46,7 @@ const SavedView: React.FC<SavedViewProps> = ({ onSelectMosque }) => {
   }
 
   return (
-    <div className="flex-1 bg-slate-50 overflow-y-auto">
+    <div className="flex-1 bg-slate-50 overflow-y-auto pb-[calc(5rem+env(safe-area-inset-bottom))] pt-[calc(5rem+env(safe-area-inset-top))]">
       <div className="p-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-black text-slate-900">Saved Mosques</h2>

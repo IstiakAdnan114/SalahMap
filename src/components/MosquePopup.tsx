@@ -245,18 +245,18 @@ const MosquePopup: React.FC<MosquePopupProps> = ({ mosque, onClose, onDelete, on
       />
       
       {/* Modal Content */}
-      <div className="relative w-full max-w-lg bg-white rounded-[32px] shadow-2xl overflow-hidden flex flex-col max-h-[85vh] sm:max-h-[90vh]">
+      <div className="relative w-full max-w-lg bg-white rounded-[32px] sm:rounded-[32px] shadow-2xl overflow-hidden flex flex-col max-h-[85dvh] sm:max-h-[90vh]">
         {/* Fixed Header */}
         <div className="p-6 pb-4 border-b border-slate-100 shrink-0">
           <div className="flex justify-between items-start">
-            <div className="flex-1 pr-4">
+            <div className="flex-1 pr-2 min-w-0">
               {isEditingName ? (
                 <div className="flex flex-col gap-2">
                   <input
                     type="text"
                     value={editedName}
                     onChange={(e) => setEditedName(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xl font-black text-[#0F7A5C] focus:ring-2 focus:ring-[#0F7A5C] outline-none"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-lg sm:text-xl font-black text-[#0F7A5C] focus:ring-2 focus:ring-[#0F7A5C] outline-none"
                     autoFocus
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') handleSaveName();
@@ -280,9 +280,9 @@ const MosquePopup: React.FC<MosquePopupProps> = ({ mosque, onClose, onDelete, on
                   </div>
                 </div>
               ) : (
-                <div className="group flex items-center gap-2">
+                <div className="group flex items-center gap-2 min-w-0">
                   <h3 
-                    className="text-2xl font-black text-[#0F7A5C] leading-tight cursor-pointer hover:opacity-80 transition-opacity"
+                    className="text-lg sm:text-2xl font-black text-[#0F7A5C] leading-tight cursor-pointer hover:opacity-80 transition-opacity truncate"
                     onClick={() => setIsEditingName(true)}
                   >
                     {mosque.name}
@@ -343,7 +343,7 @@ const MosquePopup: React.FC<MosquePopupProps> = ({ mosque, onClose, onDelete, on
         </div>
 
         {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto p-6 pt-4 pb-12">
+        <div className="flex-1 overflow-y-auto p-6 pt-4 pb-[calc(3rem+env(safe-area-inset-bottom))]">
           {showDeleteConfirm ? (
             <div className="py-8 px-6 bg-rose-50 rounded-3xl border border-rose-100 text-center">
               <div className="w-16 h-16 bg-rose-100 text-rose-600 rounded-full flex items-center justify-center mx-auto mb-4">

@@ -89,7 +89,7 @@ const MosqueList: React.FC<MosqueListProps> = ({ mosques, mapCenter, searchRadiu
     .sort((a, b) => (a.distance || 0) - (b.distance || 0));
 
   return (
-    <div className="flex-1 overflow-y-auto bg-white flex flex-col h-full pt-20">
+    <div className="flex-1 overflow-y-auto bg-white flex flex-col h-full pt-[calc(5rem+env(safe-area-inset-top))]">
       <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center shrink-0">
         <div>
           <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
@@ -108,7 +108,7 @@ const MosqueList: React.FC<MosqueListProps> = ({ mosques, mapCenter, searchRadiu
         </button>
       </div>
 
-      <div className="divide-y divide-slate-50 pb-20">
+      <div className="divide-y divide-slate-50 pb-[calc(5rem+env(safe-area-inset-bottom))]">
         {sortedMosques.length === 0 ? (
           <div className="p-12 text-center">
             <MapPin className="w-12 h-12 text-slate-200 mx-auto mb-4" />

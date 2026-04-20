@@ -61,7 +61,7 @@ const AddMosqueModal: React.FC<AddMosqueModalProps> = ({ isOpen, onClose, userLo
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 pt-2 pb-12">
+            <div className="flex-1 overflow-y-auto p-6 pt-2 pb-[calc(3rem+env(safe-area-inset-bottom))]">
               <form onSubmit={handleSubmit} className="space-y-6 pb-10">
                 <div>
                   <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Mosque Name</label>

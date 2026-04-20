@@ -52,7 +52,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, radius, 
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 pt-4 space-y-8 pb-12">
+            <div className="flex-1 overflow-y-auto p-6 pt-4 space-y-8 pb-[calc(3rem+env(safe-area-inset-bottom))]">
               {/* Search Radius Section */}
               <section>
                 <div className="flex items-center gap-2 mb-4">
