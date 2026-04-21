@@ -39,8 +39,10 @@ const MosqueList: React.FC<MosqueListProps> = ({ mosques, mapCenter, searchRadiu
     const now = new Date();
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
 
+    const isFriday = now.getDay() === 5;
     const prayers: { name: string; time: string; minutes: number }[] = [
       { name: 'Fajr', time: times.fajr, minutes: timeToMinutes(times.fajr) },
+      ...(isFriday ? [{ name: "Jumu'ah", time: times.jumua, minutes: timeToMinutes(times.jumua) }] : []),
       { name: 'Dhuhr', time: times.dhuhr, minutes: timeToMinutes(times.dhuhr) },
       { name: 'Asr', time: times.asr, minutes: timeToMinutes(times.asr) },
       { name: 'Maghrib', time: times.maghrib, minutes: timeToMinutes(times.maghrib) },

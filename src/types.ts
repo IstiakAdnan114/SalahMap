@@ -16,12 +16,14 @@ export interface PrayerTimes {
   asr: string;
   maghrib: string;
   isha: string;
+  jumua: string;
   updated_at: string;
   fajr_score: number;
   dhuhr_score: number;
   asr_score: number;
   maghrib_score: number;
   isha_score: number;
+  jumua_score: number;
   fajr_upvotes?: number;
   fajr_downvotes?: number;
   dhuhr_upvotes?: number;
@@ -32,6 +34,8 @@ export interface PrayerTimes {
   maghrib_downvotes?: number;
   isha_upvotes?: number;
   isha_downvotes?: number;
+  jumua_upvotes?: number;
+  jumua_downvotes?: number;
 }
 
 export interface Vote {
@@ -43,7 +47,7 @@ export interface Vote {
   created_at: string;
 }
 
-export type PrayerName = 'fajr' | 'dhuhr' | 'asr' | 'maghrib' | 'isha';
+export type PrayerName = 'fajr' | 'dhuhr' | 'asr' | 'maghrib' | 'isha' | 'jumua';
 
 // Bangladesh Bounds
 export const COUNTRY_BOUNDS: [[number, number], [number, number]] = [

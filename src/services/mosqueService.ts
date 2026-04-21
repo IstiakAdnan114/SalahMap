@@ -253,7 +253,7 @@ export const mosqueService = {
         if (data) {
           // We trust the counts stored in the prayer_times table for performance and to avoid RLS issues on the votes table
           // The vote function is responsible for keeping these counts in sync
-          const prayers = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'] as const;
+          const prayers = ['fajr', 'dhuhr', 'asr', 'maghrib', 'isha', 'jumua'] as const;
           prayers.forEach(p => {
             data[`${p}_upvotes`] = data[`${p}_upvotes`] || 0;
             data[`${p}_downvotes`] = data[`${p}_downvotes`] || 0;
@@ -301,7 +301,8 @@ export const mosqueService = {
           current.dhuhr !== times.dhuhr ||
           current.asr !== times.asr ||
           current.maghrib !== times.maghrib ||
-          current.isha !== times.isha
+          current.isha !== times.isha ||
+          current.jumua !== times.jumua
         );
 
         if (current && !hasChanges) {
@@ -329,6 +330,7 @@ export const mosqueService = {
             asr_score: 0,
             maghrib_score: 0,
             isha_score: 0,
+            jumua_score: 0,
             fajr_upvotes: 0,
             fajr_downvotes: 0,
             dhuhr_upvotes: 0,
@@ -338,7 +340,9 @@ export const mosqueService = {
             maghrib_upvotes: 0,
             maghrib_downvotes: 0,
             isha_upvotes: 0,
-            isha_downvotes: 0
+            isha_downvotes: 0,
+            jumua_upvotes: 0,
+            jumua_downvotes: 0
           }])
           .select()
           .single();
@@ -361,6 +365,7 @@ export const mosqueService = {
       asr_score: 0,
       maghrib_score: 0,
       isha_score: 0,
+      jumua_score: 0,
       fajr_upvotes: 0,
       fajr_downvotes: 0,
       dhuhr_upvotes: 0,
@@ -370,7 +375,9 @@ export const mosqueService = {
       maghrib_upvotes: 0,
       maghrib_downvotes: 0,
       isha_upvotes: 0,
-      isha_downvotes: 0
+      isha_downvotes: 0,
+      jumua_upvotes: 0,
+      jumua_downvotes: 0
     } as PrayerTimes;
 
     const localTimes = JSON.parse(localStorage.getItem(LOCAL_TIMES_KEY) || '[]');

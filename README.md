@@ -82,12 +82,14 @@ CREATE TABLE prayer_times (
   asr TEXT,
   maghrib TEXT,
   isha TEXT,
+  jumua TEXT,
   updated_at TIMESTAMPTZ DEFAULT now(),
   fajr_score INTEGER DEFAULT 0,
   dhuhr_score INTEGER DEFAULT 0,
   asr_score INTEGER DEFAULT 0,
   maghrib_score INTEGER DEFAULT 0,
-  isha_score INTEGER DEFAULT 0
+  isha_score INTEGER DEFAULT 0,
+  jumua_score INTEGER DEFAULT 0
   -- (Additional vote count columns recommended)
 );
 ```

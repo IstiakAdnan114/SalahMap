@@ -31,7 +31,8 @@ const MosquePopup: React.FC<MosquePopupProps> = ({ mosque, onClose, onDelete, on
     dhuhr: '13:15',
     asr: '16:45',
     maghrib: '18:30',
-    isha: '20:00'
+    isha: '20:00',
+    jumua: '13:30'
   });
 
   useEffect(() => {
@@ -81,7 +82,8 @@ const MosquePopup: React.FC<MosquePopupProps> = ({ mosque, onClose, onDelete, on
         dhuhr: times.dhuhr,
         asr: times.asr,
         maghrib: times.maghrib,
-        isha: times.isha
+        isha: times.isha,
+        jumua: times.jumua
       });
     }
   }, [times]);
@@ -380,6 +382,7 @@ const MosquePopup: React.FC<MosquePopupProps> = ({ mosque, onClose, onDelete, on
                   { label: 'asr', time: times.asr, score: times.asr_score || 0, up: times.asr_upvotes || 0, down: times.asr_downvotes || 0 },
                   { label: 'maghrib', time: times.maghrib, score: times.maghrib_score || 0, up: times.maghrib_upvotes || 0, down: times.maghrib_downvotes || 0 },
                   { label: 'isha', time: times.isha, score: times.isha_score || 0, up: times.isha_upvotes || 0, down: times.isha_downvotes || 0 },
+                  { label: 'jumua', time: times.jumua, score: times.jumua_score || 0, up: times.jumua_upvotes || 0, down: times.jumua_downvotes || 0 },
                 ].map((p) => {
                   const total = p.up + p.down;
                   const confidence = total > 0 ? (p.up / total) * 100 : 50;
@@ -492,7 +495,7 @@ const MosquePopup: React.FC<MosquePopupProps> = ({ mosque, onClose, onDelete, on
                   
                   <form onSubmit={handleUpdateTimes} className="space-y-6">
                     <div className="grid grid-cols-2 gap-4">
-                      {['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'].map((p) => (
+                      {['fajr', 'dhuhr', 'asr', 'maghrib', 'isha', 'jumua'].map((p) => (
                         <div key={p}>
                           <label 
                             htmlFor={`time-${p}`}
@@ -548,7 +551,7 @@ const MosquePopup: React.FC<MosquePopupProps> = ({ mosque, onClose, onDelete, on
                   
                   <form onSubmit={handleUpdateTimes} className="space-y-6">
                     <div className="grid grid-cols-2 gap-4">
-                      {['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'].map((p) => (
+                      {['fajr', 'dhuhr', 'asr', 'maghrib', 'isha', 'jumua'].map((p) => (
                         <div key={p}>
                           <label 
                             htmlFor={`add-time-${p}`}
