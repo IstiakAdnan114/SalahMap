@@ -179,15 +179,15 @@ export default function App() {
       // 1. Local mosques (Instant)
       const localPromise = forceRefresh ? Promise.resolve() : mosqueService.getLocalMosques().then(updateMosques);
 
-      // 2. Supabase mosques (Fast)
-      const supabasePromise = (isSupabaseConfigured && !forceRefresh)
+      // 2. Supabase mosques (Fast - Always fetch to show community updates)
+      const supabasePromise = (isSupabaseConfigured)
         ? supabase
           .from('mosques')
           .select('*')
-          .gte('latitude', lat - 0.1)
-          .lte('latitude', lat + 0.1)
-          .gte('longitude', lon - 0.1)
-          .lte('longitude', lon + 0.1)
+          .gte('latitude', lat - 0.2) // Increased range for shared cache
+          .lte('latitude', lat + 0.2)
+          .gte('longitude', lon - 0.2)
+          .lte('longitude', lon + 0.2)
           .then(result => {
             if (result.data) updateMosques(result.data);
           })

@@ -125,6 +125,32 @@ export const mosqueService = {
     saveMasterList();
   },
 
+  // Batch sync discovered mosques to Supabase for the whole community
+  async syncMosquesToSupabase(mosques: Mosque[]) {
+    if (!isSupabaseConfigured || mosques.length === 0) return;
+    
+    try {
+      const { error } = await supabase
+        .from('mosques')
+        .upsert(
+          mosques.map(m => ({
+            id: m.id,
+            name: m.name,
+            latitude: m.latitude,
+            longitude: m.longitude,
+            address: m.address,
+            is_deleted: false
+          })), 
+          { onConflict: 'id', ignoreDuplicates: false }
+        );
+      
+      if (error) console.error('Error batch syncing to Supabase:', error);
+      else console.log(`Successfully shared ${mosques.length} mosques with the community!`);
+    } catch (e) {
+      console.error('Batch sync catch:', e);
+    }
+  },
+
   async fetchNearbyFromOSM(lat: number, lon: number, radius: number = 500, forceRefresh: boolean = false): Promise<Mosque[]> {
     const removedIds = JSON.parse(localStorage.getItem(LOCAL_REMOVED_KEY) || '[]');
     // Round coordinates to ~50m to increase cache hits (0.0005 is roughly 50m)
@@ -211,6 +237,11 @@ export const mosqueService = {
         
         // Add to master list
         this.addToMasterList(mosques);
+        
+        // Push to individual Supabase shared DB so other users don't have to sync from OSM
+        if (mosques.length > 0) {
+          this.syncMosquesToSupabase(mosques);
+        }
         
         const removedIds = JSON.parse(localStorage.getItem(LOCAL_REMOVED_KEY) || '[]');
         return mosques.filter(m => !removedIds.includes(m.id));
