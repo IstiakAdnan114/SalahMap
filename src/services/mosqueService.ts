@@ -99,26 +99,6 @@ export const mosqueService = {
     });
   },
 
-  // Search by name/keyword across all known mosques
-  searchByKeyword(query: string): Mosque[] {
-    const term = query.toLowerCase().trim();
-    if (!term) return [];
-    
-    const removedIds = JSON.parse(localStorage.getItem(LOCAL_REMOVED_KEY) || '[]');
-    const combinedList = [...(staticMosques as Mosque[]), ...masterMosqueList];
-    
-    const uniqueMap = new Map<string, Mosque>();
-    combinedList.forEach(m => uniqueMap.set(m.id, m));
-
-    return Array.from(uniqueMap.values())
-      .filter(m => {
-        if (removedIds.includes(m.id) || m.is_deleted) return false;
-        return m.name.toLowerCase().includes(term) || 
-               (m.address && m.address.toLowerCase().includes(term));
-      })
-      .slice(0, 50); // Limit results for performance
-  },
-
   // Add mosques to the master list
   addToMasterList(mosques: Mosque[]) {
     masterMosqueList = [...masterMosqueList, ...mosques];

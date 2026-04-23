@@ -347,45 +347,20 @@ export default function App() {
     if (!searchQuery.trim()) return;
     
     setLoading(true);
-    
-    // 1. Try to search local database by name first (Instant)
-    const localMatches = mosqueService.searchByKeyword(searchQuery);
-    if (localMatches.length > 0) {
-      const bestMatch = localMatches[0];
-      setMapCenter([bestMatch.latitude, bestMatch.longitude]);
-      setForceRecenter(prev => prev + 1);
-      setSelectedMosque(bestMatch);
-      setLoading(false);
-      setSearchQuery(''); // Clear on success
-      return;
-    }
-
-    // 2. Fallback to Nominatim for area/city search
     try {
       const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&countrycodes=bd`);
       const data = await response.json();
-      
       if (data && data.length > 0) {
         const { lat, lon } = data[0];
         const newLat = parseFloat(lat);
         const newLon = parseFloat(lon);
-        
         setMapCenter([newLat, newLon]);
         setForceRecenter(prev => prev + 1);
-        
-        // If we move to a new area via city search, we should check if we have data there
-        // If the area is likely empty in our local DB, we trigger ONE automatic sync for the user
-        const nearbyCount = mosqueService.searchMasterList(newLat, newLon, searchRadius).length;
-        if (nearbyCount < 3) {
-          fetchMosques(newLat, newLon, searchRadius, true);
-        }
       }
     } catch (error) {
       console.error('Search error:', error);
     }
-    
     setLoading(false);
-    setSearchQuery(''); // Clear on submit
   };
 
   return (
