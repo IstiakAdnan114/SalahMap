@@ -81,17 +81,8 @@ const saveMasterList = () => {
   }
 };
 
-// Cache for synced tiles to prevent redundant OSM fetches in the same session
-const syncedTiles = new Set<string>();
-const getTileKey = (lat: number, lon: number) => {
-  // Tile covering approx 1km x 1km
-  const latStep = Math.round(lat * 100);
-  const lonStep = Math.round(lon * 100);
-  return `${latStep}_${lonStep}`;
-};
-
 export const mosqueService = {
-  // ... existing methods stay exactly the same ...
+  // New method to search the local master list instantly
   searchMasterList(lat: number, lon: number, radiusMeters: number): Mosque[] {
     const removedIds = JSON.parse(localStorage.getItem(LOCAL_REMOVED_KEY) || '[]');
     // Combine static DB with the dynamically discovered master list
@@ -134,81 +125,106 @@ export const mosqueService = {
     saveMasterList();
   },
 
-  // Batch sync discovered mosques to Supabase for the whole community
-  async syncMosquesToSupabase(mosques: Mosque[]) {
-    if (!isSupabaseConfigured || mosques.length === 0) return;
-    
-    try {
-      const { error } = await supabase
-        .from('mosques')
-        .upsert(
-          mosques.map(m => ({
-            id: m.id,
-            name: m.name,
-            latitude: m.latitude,
-            longitude: m.longitude,
-            address: m.address,
-            is_deleted: false
-          })), 
-          { 
-            onConflict: 'id', 
-            // PREVENT OVERWRITES: If the mosque is already in Supabase (possibly renamed),
-            // ignore the raw OSM name coming in.
-            ignoreDuplicates: true 
-          }
-        );
-      
-      if (error) console.error('Error batch syncing to Supabase:', error);
-    } catch (e) {
-      console.error('Batch sync catch:', e);
-    }
-  },
-
   async fetchNearbyFromOSM(lat: number, lon: number, radius: number = 500, forceRefresh: boolean = false): Promise<Mosque[]> {
-    const cacheKey = `${lat.toFixed(4)}_${lon.toFixed(4)}_${radius}`;
     const removedIds = JSON.parse(localStorage.getItem(LOCAL_REMOVED_KEY) || '[]');
+    // Round coordinates to ~50m to increase cache hits (0.0005 is roughly 50m)
+    const cacheKey = `${lat.toFixed(4)}_${lon.toFixed(4)}_${radius}`;
     
     if (!forceRefresh) {
+      // 1. Check permanent cache
       const cached = osmCache.get(cacheKey);
-      if (cached) return cached.data.filter(m => !removedIds.includes(m.id));
+      if (cached) {
+        console.log('Returning cached OSM data (Permanent)');
+        return cached.data.filter(m => !removedIds.includes(m.id));
+      }
 
+      // 2. Check if master list already has 5+ mosques in this area
+      // This fulfills the requirement: "Skip the OSM call entirely if the master list already has 5 or more mosques"
       const localResults = this.searchMasterList(lat, lon, radius);
       if (localResults.length >= 5) {
+        console.log('Skipping OSM call: Master list already has 5+ mosques');
+        // Still mark as cached so we don't keep checking this area
+        osmCache.set(cacheKey, { data: localResults, timestamp: Date.now() });
+        saveCacheToLocal();
         return localResults.filter(m => !removedIds.includes(m.id));
       }
     }
 
-    const query = `[out:json][timeout:15];(node["amenity"="place_of_worship"]["religion"="muslim"](around:${radius},${lat},${lon});way["amenity"="place_of_worship"]["religion"="muslim"](around:${radius},${lat},${lon}););out center;`;
-    const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
+    // Faster query: limit to nodes and ways (relations are rare for mosques and slow to process)
+    // Also use a shorter timeout
+    const query = `
+      [out:json][timeout:5];
+      (
+        node["amenity"="place_of_worship"]["religion"="muslim"](around:${radius},${lat},${lon});
+        way["amenity"="place_of_worship"]["religion"="muslim"](around:${radius},${lat},${lon});
+      );
+      out center;
+    `;
+    
+    const endpoints = [
+      'https://overpass-api.de/api/interpreter',
+      'https://overpass.kumi.systems/api/interpreter',
+      'https://overpass.osm.ch/api/interpreter'
+    ];
 
-    try {
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('OSM Fetch failed');
+    const fetchWithRetry = async (endpointIndex: number, retryCount: number): Promise<Mosque[]> => {
+      const url = `${endpoints[endpointIndex]}?data=${encodeURIComponent(query)}`;
       
-      const data = await response.json();
-      if (!data.elements) return [];
+      try {
+        const response = await fetch(url);
+        
+        if (response.status === 504 || response.status === 429) {
+          if (retryCount < 2) {
+            const nextIndex = (endpointIndex + 1) % endpoints.length;
+            await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+            return fetchWithRetry(nextIndex, retryCount + 1);
+          }
+        }
 
-      const mosques = data.elements.map((el: any) => ({
-        id: `osm-${el.id}`,
-        name: el.tags?.name || 'Unnamed Mosque',
-        latitude: el.lat || el.center?.lat,
-        longitude: el.lon || el.center?.lon,
-        address: el.tags?.['addr:full'] || el.tags?.['addr:street'] || 'Address unknown',
-      })).filter((m: Mosque) => m.latitude && m.longitude);
+        if (!response.ok) {
+          throw new Error(`Overpass API responded with status: ${response.status}`);
+        }
 
-      // Save to local cache
-      osmCache.set(cacheKey, { data: mosques, timestamp: Date.now() });
-      saveCacheToLocal();
-      this.addToMasterList(mosques);
-      
-      // Share with community in background
-      if (mosques.length > 0) this.syncMosquesToSupabase(mosques);
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          throw new Error('Overpass API returned non-JSON response');
+        }
 
-      return mosques.filter(m => !removedIds.includes(m.id));
-    } catch (e) {
-      console.error('OSM error:', e);
-      return [];
-    }
+        const data = await response.json();
+        console.log(`OSM API returned ${data.elements?.length || 0} elements`);
+        
+        if (!data.elements) {
+          return [];
+        }
+
+        const mosques = data.elements.map((el: any) => ({
+          id: `osm-${el.id}`,
+          name: el.tags?.name || 'Unnamed Mosque',
+          latitude: el.lat || el.center?.lat,
+          longitude: el.lon || el.center?.lon,
+          address: el.tags?.['addr:full'] || el.tags?.['addr:street'] || 'Address unknown',
+        })).filter((m: Mosque) => m.latitude && m.longitude);
+
+        // Cache the result
+        osmCache.set(cacheKey, { data: mosques, timestamp: Date.now() });
+        saveCacheToLocal();
+        
+        // Add to master list
+        this.addToMasterList(mosques);
+        
+        const removedIds = JSON.parse(localStorage.getItem(LOCAL_REMOVED_KEY) || '[]');
+        return mosques.filter(m => !removedIds.includes(m.id));
+      } catch (error) {
+        if (retryCount < 2) {
+          const nextIndex = (endpointIndex + 1) % endpoints.length;
+          return fetchWithRetry(nextIndex, retryCount + 1);
+        }
+        console.error('Error fetching from Overpass after retries:', error);
+        return [];
+      }
+    };
+
+    return fetchWithRetry(0, 0);
   },
 
   async ensureMosqueExists(mosque: Mosque) {

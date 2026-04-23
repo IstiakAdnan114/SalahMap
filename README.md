@@ -5,12 +5,10 @@ SalahMap is a community-driven, real-time platform designed to help Muslims in B
 ## ✨ Key Features
 
 - **Interactive Map:** Explore mosques across Bangladesh with an intuitive, mobile-optimized map interface.
-- **Global Shared Cache:** A "Discover Once, Share with Everyone" system. When any user syncs an area from OpenStreetMap, those mosques are instantly saved to Supabase for all other users to see.
-- **Instant Search:** High-speed, local-first search bar that jumps to specific masjids by name immediately, with fallback to area geocoding.
 - **Community-Driven Prayer Times:** Add, update, and verify prayer times for any masjid. There are no "guesses"—times only show up once a community member confirms them.
 - **Verification System:** High-confidence prayer times are marked as "Verified" based on community upvotes, while unreliable times are flagged.
 - **Mobile Optimized:** A sleek, "Locked-to-Screen" mobile experience with dynamic viewport handling and safe-area inset support (notches, home bars).
-- **Offline Resilience:** A built-in static database of major Bangladesh mosques ensures the map works immediately upon launch.
+- **Offline Resilience:** Local caching ensures you can see your saved mosques even with a spotty connection.
 - **One-Tap Navigation:** Instantly open Google Maps for turn-by-turn directions to any masjid.
 - **Real-Time Sync:** Changes made by one user are instantly visible to everyone else across the globe.
 
@@ -20,7 +18,6 @@ SalahMap is a community-driven, real-time platform designed to help Muslims in B
 - **Styling:** Tailwind CSS 4
 - **Maps:** Leaflet & React-Leaflet
 - **Backend/Database:** Supabase (PostgreSQL, Realtime, RLS)
-- **Data Source:** OpenStreetMap (Overpass API)
 - **Animations:** motion (Framer Motion)
 - **Icons:** Lucide React
 
@@ -35,7 +32,7 @@ SalahMap is a community-driven, real-time platform designed to help Muslims in B
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/IstiakAdnan114/salahmap.git
+   git clone https://github.com/your-username/salahmap.git
    cd salahmap
    ```
 
@@ -58,20 +55,12 @@ SalahMap is a community-driven, real-time platform designed to help Muslims in B
 
 ## 🗄️ Database Setup (Supabase)
 
-To enable the collaborative features, run the following SQL in your Supabase SQL Editor.
+To enable the full collaborative experience, you'll need the following tables in your Supabase project:
 
-### 1. Unified Table Migration
-Ensure your tables use `TEXT` for IDs to support OpenStreetMap syncing and community sharing.
-
+### 1. `mosques` Table
+Stores masjid details and global soft-delete status.
 ```sql
--- 1. Correct the ID types for Global Syncing
-ALTER TABLE prayer_times ALTER COLUMN mosque_id TYPE TEXT;
-ALTER TABLE mosques 
-  ALTER COLUMN id TYPE TEXT,
-  ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT false;
-
--- 2. Create the mosques table (if not exists)
-CREATE TABLE IF NOT EXISTS mosques (
+CREATE TABLE mosques (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   latitude DOUBLE PRECISION NOT NULL,
@@ -80,21 +69,12 @@ CREATE TABLE IF NOT EXISTS mosques (
   is_deleted BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT now()
 );
-
--- 3. Setup Row Level Security (RLS)
--- Allow anyone to discover and sync mosques to the global cache
-DROP POLICY IF EXISTS "Anyone can discover mosques" ON mosques;
-CREATE POLICY "Anyone can discover mosques" 
-  ON mosques FOR ALL 
-  TO public
-  USING (true)
-  WITH CHECK (true);
 ```
 
-### 4. `prayer_times` Table
+### 2. `prayer_times` Table
 Stores community-submitted schedules and confidence scores.
 ```sql
-CREATE TABLE IF NOT EXISTS prayer_times (
+CREATE TABLE prayer_times (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   mosque_id TEXT REFERENCES mosques(id),
   fajr TEXT,
@@ -104,10 +84,13 @@ CREATE TABLE IF NOT EXISTS prayer_times (
   isha TEXT,
   jumua TEXT,
   updated_at TIMESTAMPTZ DEFAULT now(),
-  fajr_upvotes INTEGER DEFAULT 0,
-  fajr_downvotes INTEGER DEFAULT 0,
-  -- repeat for other prayers...
-  created_at TIMESTAMPTZ DEFAULT now()
+  fajr_score INTEGER DEFAULT 0,
+  dhuhr_score INTEGER DEFAULT 0,
+  asr_score INTEGER DEFAULT 0,
+  maghrib_score INTEGER DEFAULT 0,
+  isha_score INTEGER DEFAULT 0,
+  jumua_score INTEGER DEFAULT 0
+  -- (Additional vote count columns recommended)
 );
 ```
 
@@ -131,12 +114,9 @@ SalahMap is designed to be added to your home screen. It uses:
 - `safe-area-inset` CSS constants to avoid UI overlaps with phone notches.
 - `overscroll-behavior: none` to prevent unwanted browser bouncing.
 
-## 👨‍💻 Developer & Contact
+## 👨‍💻 Developer
 
 **Md. Istiak Adnan**
-
-- **Email:** [adnanistiak111@gmail.com](mailto:adnanistiak111@gmail.com)
-- **GitHub:** [IstiakAdnan114](https://github.com/IstiakAdnan114)
 
 ## 🤝 Contributing
 
@@ -144,4 +124,4 @@ Contributions are welcome! Whether it's fixing a bug, adding a new feature, or i
 
 ---
 
-**SalahMap** - *Never miss a salah — and help others never miss theirs.*
+**SalahMap** - *Connecting the Ummah, one masjid at a time.*

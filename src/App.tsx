@@ -140,14 +140,12 @@ export default function App() {
       setMosques(prev => {
         const localRemovedIds = JSON.parse(localStorage.getItem('mosque_finder_removed_ids') || '[]');
         
-        // Strategy: Incoming data wins over previous state if it's new/updated.
-        // By putting newMosques FIRST, findIndex will pick the fresh data from Supabase/OSM
-        // over the potentially stale data already in 'prev'.
+        // Strategy: We want LATEST data to win.
+        // We put newMosques first so they overwrite older data in the combined list
         const combined = [...newMosques, ...prev];
         
         // Filter out blacklisted ones and duplicates
-        // findIndex returns the index of the FIRST occurrence.
-        // Since newMosques is at the start, it will be selected over 'prev'.
+        // Duplicates: findIndex will pick the one at the start of the array, which is from newMosques
         const filtered = combined.filter((m, i, a) => {
           // Rule 1: Don't show if locally deleted
           if (localRemovedIds.includes(m.id)) return false;
@@ -181,15 +179,15 @@ export default function App() {
       // 1. Local mosques (Instant)
       const localPromise = forceRefresh ? Promise.resolve() : mosqueService.getLocalMosques().then(updateMosques);
 
-      // 2. Supabase mosques (Fast - Always fetch to show community updates)
-      const supabasePromise = (isSupabaseConfigured)
+      // 2. Supabase mosques (Fast)
+      const supabasePromise = (isSupabaseConfigured && !forceRefresh)
         ? supabase
           .from('mosques')
           .select('*')
-          .gte('latitude', lat - 0.2) // Increased range for shared cache
-          .lte('latitude', lat + 0.2)
-          .gte('longitude', lon - 0.2)
-          .lte('longitude', lon + 0.2)
+          .gte('latitude', lat - 0.1)
+          .lte('latitude', lat + 0.1)
+          .gte('longitude', lon - 0.1)
+          .lte('longitude', lon + 0.1)
           .then(result => {
             if (result.data) updateMosques(result.data);
           })
