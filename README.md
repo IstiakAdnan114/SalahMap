@@ -35,7 +35,7 @@ SalahMap is a community-driven, real-time platform designed to help Muslims in B
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/your-username/salahmap.git
+   git clone https://github.com/IstiakAdnan114/salahmap.git
    cd salahmap
    ```
 
@@ -131,9 +131,12 @@ SalahMap is designed to be added to your home screen. It uses:
 - `safe-area-inset` CSS constants to avoid UI overlaps with phone notches.
 - `overscroll-behavior: none` to prevent unwanted browser bouncing.
 
-## 👨‍💻 Developer
+## 👨‍💻 Developer & Contact
 
 **Md. Istiak Adnan**
+
+- **Email:** [adnanistiak111@gmail.com](mailto:adnanistiak111@gmail.com)
+- **GitHub:** [IstiakAdnan114](https://github.com/IstiakAdnan114)
 
 ## 🤝 Contributing
 
@@ -141,4 +144,4 @@ Contributions are welcome! Whether it's fixing a bug, adding a new feature, or i
 
 ---
 
-**SalahMap** - *Connecting the Ummah, one masjid at a time.*
+**SalahMap** - *Never miss a salah — and help others never miss theirs.*
