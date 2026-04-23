@@ -229,68 +229,27 @@ export const mosqueService = {
       out center;
     `;
     
-    const endpoints = [
-      'https://overpass-api.de/api/interpreter',
-      'https://overpass.kumi.systems/api/interpreter',
-      'https://overpass.osm.ch/api/interpreter',
-      'https://overpass.be/api/interpreter',
-      'https://lz4.overpass-api.de/api/interpreter',
-      'https://z.overpass-api.de/api/interpreter'
-    ];
-
-    const fetchFromMirror = async (url: string) => {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout
-      try {
-        const response = await fetch(`${url}?data=${encodeURIComponent(query)}`, { 
-          signal: controller.signal,
-          headers: { 'Accept': 'application/json' }
-        });
-        clearTimeout(timeoutId);
-        
-        if (response.status === 429) throw new Error('Rate limited');
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        
-        const data = await response.json();
-        if (!data.elements) return [];
-        
-        return data.elements.map((el: any) => ({
-          id: `osm-${el.id}`,
-          name: el.tags?.name || 'Unnamed Mosque',
-          latitude: el.lat || el.center?.lat,
-          longitude: el.lon || el.center?.lon,
-          address: el.tags?.['addr:full'] || el.tags?.['addr:street'] || 'Address unknown',
-        })).filter((m: Mosque) => m.latitude && m.longitude);
-      } catch (e) {
-        clearTimeout(timeoutId);
-        throw e;
-      }
-    };
-
     try {
-      // Strategy: Race 3 mirrors first for speed
-      const shuffled = [...endpoints].sort(() => 0.5 - Math.random());
-      const firstBatch = shuffled.slice(0, 3);
-      const remaining = shuffled.slice(3);
+      const response = await fetch('/api/overpass', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query })
+      });
+
+      if (!response.ok) throw new Error(`Proxy error: ${response.status}`);
       
-      let mosques: Mosque[];
-      try {
-        mosques = await Promise.any(firstBatch.map(fetchFromMirror));
-      } catch (aggregateError) {
-        // If the first 3 fail, try the remaining ones sequentially as a last resort
-        console.warn('First batch of OSM mirrors failed, trying fallback mirrors...');
-        mosques = [];
-        for (const mirror of remaining) {
-          try {
-            mosques = await fetchFromMirror(mirror);
-            if (mosques.length > 0) break;
-          } catch (e) {
-            console.error(`Fallback mirror ${mirror} failed:`, e);
-          }
-        }
-      }
+      const data = await response.json();
+      if (!data.elements) return [];
       
-      if (mosques && mosques.length > 0) {
+      const mosques = data.elements.map((el: any) => ({
+        id: `osm-${el.id}`,
+        name: el.tags?.name || 'Unnamed Mosque',
+        latitude: el.lat || el.center?.lat,
+        longitude: el.lon || el.center?.lon,
+        address: el.tags?.['addr:full'] || el.tags?.['addr:street'] || 'Address unknown',
+      })).filter((m: Mosque) => m.latitude && m.longitude);
+      
+      if (mosques.length > 0) {
         syncedTiles.add(tileKey);
         osmCache.set(cacheKey, { data: mosques, timestamp: Date.now() });
         saveCacheToLocal();
@@ -298,9 +257,9 @@ export const mosqueService = {
         this.syncMosquesToSupabase(mosques);
       }
       
-      return (mosques || []).filter(m => !removedIds.includes(m.id));
+      return mosques.filter(m => !removedIds.includes(m.id));
     } catch (e) {
-      console.error('All OSM mirrors (primary and fallback) failed:', e);
+      console.error('Failed to fetch from Overpass Proxy:', e);
       return [];
     }
   },
