@@ -348,7 +348,7 @@ export default function App() {
     
     setLoading(true);
     try {
-      const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&countrycodes=bd`);
+      const response = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}`);
       const data = await response.json();
       if (data && data.length > 0) {
         const { lat, lon } = data[0];

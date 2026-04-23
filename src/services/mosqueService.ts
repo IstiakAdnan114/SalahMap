@@ -148,16 +148,18 @@ export const mosqueService = {
     ];
 
     const fetchWithRetry = async (endpointIndex: number, retryCount: number): Promise<Mosque[]> => {
-      const url = `${endpoints[endpointIndex]}?data=${encodeURIComponent(query)}`;
+      // Use our internal proxy route to avoid CORS issues on production (Vercel)
+      const url = `/api/overpass?data=${encodeURIComponent(query)}`;
       
       try {
         const response = await fetch(url);
         
-        if (response.status === 504 || response.status === 429) {
-          if (retryCount < 2) {
-            const nextIndex = (endpointIndex + 1) % endpoints.length;
+        if (response.status === 504 || response.status === 429 || response.status === 502) {
+          // If our proxy failed or the backend API was busy, we could retry, 
+          // but we'll keep it simple since the proxy itself handles the multiple endpoints.
+          if (retryCount < 1) {
             await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
-            return fetchWithRetry(nextIndex, retryCount + 1);
+            return fetchWithRetry(endpointIndex, retryCount + 1);
           }
         }
 
