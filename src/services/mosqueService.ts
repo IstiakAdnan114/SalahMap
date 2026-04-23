@@ -148,20 +148,52 @@ export const mosqueService = {
             latitude: m.latitude,
             longitude: m.longitude,
             address: m.address,
-            is_deleted: false
+            is_deleted: m.is_deleted || false
           })), 
           { 
             onConflict: 'id', 
-            // CRITICAL FIX: If the mosque already exists in Supabase (possibly renamed by a user),
-            // do NOT overwrite it with raw/unnamed data from OSM.
-            ignoreDuplicates: true 
+            // We want to skip duplicates ONLY if the incoming data is "Unnamed Mosque"
+            // and the existing data has a real name. However, upsert with ignoreDuplicates doesn't support that.
+            // So we use standard upsert but ensure names are protected in the merge logic.
+            ignoreDuplicates: false 
           }
         );
       
       if (error) console.error('Error batch syncing to Supabase:', error);
-      else console.log(`Successfully shared ${mosques.length} mosques with the community!`);
     } catch (e) {
       console.error('Batch sync catch:', e);
+    }
+  },
+
+  async fetchFromSupabase(lat: number, lon: number, radiusMeters: number): Promise<Mosque[]> {
+    if (!isSupabaseConfigured) return [];
+
+    try {
+      // Calculate a rough bounding box for the query (faster than complex geometry)
+      const latDelta = radiusMeters / 111000;
+      const lonDelta = radiusMeters / (111000 * Math.cos(lat * (Math.PI / 180)));
+
+      const { data, error } = await supabase
+        .from('mosques')
+        .select('*')
+        .gte('latitude', lat - latDelta)
+        .lte('latitude', lat + latDelta)
+        .gte('longitude', lon - lonDelta)
+        .lte('longitude', lon + lonDelta)
+        .eq('is_deleted', false);
+
+      if (error) throw error;
+      return (data || []).map(m => ({
+        id: m.id,
+        name: m.name,
+        latitude: m.latitude,
+        longitude: m.longitude,
+        address: m.address,
+        is_deleted: m.is_deleted
+      }));
+    } catch (e) {
+      console.error('Error fetching from Community Cache:', e);
+      return [];
     }
   },
 
