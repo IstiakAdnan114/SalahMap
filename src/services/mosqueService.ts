@@ -141,7 +141,12 @@ export const mosqueService = {
             address: m.address,
             is_deleted: false
           })), 
-          { onConflict: 'id', ignoreDuplicates: false }
+          { 
+            onConflict: 'id', 
+            // CRITICAL FIX: If the mosque already exists in Supabase (possibly renamed by a user),
+            // do NOT overwrite it with raw/unnamed data from OSM.
+            ignoreDuplicates: true 
+          }
         );
       
       if (error) console.error('Error batch syncing to Supabase:', error);

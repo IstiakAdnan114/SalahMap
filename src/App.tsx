@@ -140,12 +140,13 @@ export default function App() {
       setMosques(prev => {
         const localRemovedIds = JSON.parse(localStorage.getItem('mosque_finder_removed_ids') || '[]');
         
-        // Strategy: We want LATEST data to win.
-        // We put newMosques first so they overwrite older data in the combined list
-        const combined = [...newMosques, ...prev];
+        // Strategy: High-confidence (community/local) data wins.
+        // We put prev first, then newMosques.
+        const combined = [...prev, ...newMosques];
         
         // Filter out blacklisted ones and duplicates
-        // Duplicates: findIndex will pick the one at the start of the array, which is from newMosques
+        // Since we put 'prev' first, findIndex will pick the existing data (Supabase/Local) 
+        // over raw incoming OSM data for the same ID.
         const filtered = combined.filter((m, i, a) => {
           // Rule 1: Don't show if locally deleted
           if (localRemovedIds.includes(m.id)) return false;
