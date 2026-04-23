@@ -1,0 +1,17 @@
+[
+  { "id": "db-1", "name": "Baitul Mukarram National Mosque", "latitude": 23.7317, "longitude": 90.4124, "address": "Dhaka, Bangladesh" },
+  { "id": "db-2", "name": "Star Mosque (Tara Masjid)", "latitude": 23.7157, "longitude": 90.4019, "address": "Armanitola, Dhaka" },
+  { "id": "db-3", "name": "Chawkbazar Shahi Mosque", "latitude": 23.7153, "longitude": 90.3957, "address": "Chowk Bazar, Dhaka" },
+  { "id": "db-4", "name": "High Court Mazar Mosque", "latitude": 23.7336, "longitude": 90.4005, "address": "Ramna, Dhaka" },
+  { "id": "db-5", "name": "Anderkilla Shahi Jame Masjid", "latitude": 22.3392, "longitude": 91.8360, "address": "Chittagong, Bangladesh" },
+  { "id": "db-6", "name": "Shah Amanat Shah Dargah Mosque", "latitude": 22.3355, "longitude": 91.8395, "address": "Laldighi, Chittagong" },
+  { "id": "db-7", "name": "Hazrat Shahjalal Mazar Mosque", "latitude": 24.9015, "longitude": 91.8617, "address": "Sylhet, Bangladesh" },
+  { "id": "db-8", "name": "Hazrat Shah Paran Mazar Mosque", "latitude": 24.9127, "longitude": 91.9169, "address": "Sylhet, Bangladesh" },
+  { "id": "db-9", "name": "Sixty Dome Mosque (Shat Gombuj)", "latitude": 22.6738, "longitude": 89.7417, "address": "Bagerhat, Khulna" },
+  { "id": "db-10", "name": "Rajshahi University Jamia Mosque", "latitude": 24.3725, "longitude": 88.6366, "address": "RU Campus, Rajshahi" },
+  { "id": "db-11", "name": "Barisal Jami Kasalia Mosque", "latitude": 22.7010, "longitude": 90.3535, "address": "Barisal, Bangladesh" },
+  { "id": "db-12", "name": "Ghani Mia Mosque", "latitude": 23.9500, "longitude": 90.5833, "address": "Narsingdi, Bangladesh" },
+  { "id": "db-13", "name": "Paharpur Buddhist Vihar Mosque", "latitude": 25.0311, "longitude": 88.9772, "address": "Naogaon, Bangladesh" },
+  { "id": "db-14", "name": "Kusumba Mosque", "latitude": 24.7533, "longitude": 88.8514, "address": "Manda, Naogaon" },
+  { "id": "db-15", "name": "Atiya Mosque", "latitude": 24.1864, "longitude": 89.9114, "address": "Tangail, Bangladesh" }
+]

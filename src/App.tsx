@@ -193,9 +193,11 @@ export default function App() {
           })
         : Promise.resolve();
 
-      // 3. OSM mosques (Slower)
-      const osmPromise = mosqueService.fetchNearbyFromOSM(lat, lon, radius, forceRefresh)
-        .then(updateMosques);
+      // 3. OSM mosques (Only if forced, because it is slow)
+      const osmPromise = (forceRefresh)
+        ? mosqueService.fetchNearbyFromOSM(lat, lon, radius, forceRefresh)
+            .then(updateMosques)
+        : Promise.resolve();
 
       // Hide initial loading screen as soon as local or supabase finish
       // or after a short timeout (1s) to keep the app responsive
@@ -345,20 +347,45 @@ export default function App() {
     if (!searchQuery.trim()) return;
     
     setLoading(true);
+    
+    // 1. Try to search local database by name first (Instant)
+    const localMatches = mosqueService.searchByKeyword(searchQuery);
+    if (localMatches.length > 0) {
+      const bestMatch = localMatches[0];
+      setMapCenter([bestMatch.latitude, bestMatch.longitude]);
+      setForceRecenter(prev => prev + 1);
+      setSelectedMosque(bestMatch);
+      setLoading(false);
+      setSearchQuery(''); // Clear on success
+      return;
+    }
+
+    // 2. Fallback to Nominatim for area/city search
     try {
       const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&countrycodes=bd`);
       const data = await response.json();
+      
       if (data && data.length > 0) {
         const { lat, lon } = data[0];
         const newLat = parseFloat(lat);
         const newLon = parseFloat(lon);
+        
         setMapCenter([newLat, newLon]);
         setForceRecenter(prev => prev + 1);
+        
+        // If we move to a new area via city search, we should check if we have data there
+        // If the area is likely empty in our local DB, we trigger ONE automatic sync for the user
+        const nearbyCount = mosqueService.searchMasterList(newLat, newLon, searchRadius).length;
+        if (nearbyCount < 3) {
+          fetchMosques(newLat, newLon, searchRadius, true);
+        }
       }
     } catch (error) {
       console.error('Search error:', error);
     }
+    
     setLoading(false);
+    setSearchQuery(''); // Clear on submit
   };
 
   return (
@@ -567,10 +594,10 @@ export default function App() {
                       className={`h-12 px-4 rounded-2xl shadow-xl flex items-center gap-2 border border-slate-100 font-bold text-sm transition-all ${
                         isSyncing ? 'bg-slate-50 text-slate-400' : 'bg-white text-[#0F7A5C]'
                       }`}
-                      title="Refresh from OSM"
+                      title="Sync from Web (Overpass API)"
                     >
                       <RefreshCw className={`w-5 h-5 ${isSyncing ? 'animate-spin' : ''}`} />
-                      {isSyncing ? 'Refreshing...' : 'Refresh OSM'}
+                      {isSyncing ? 'Syncing...' : 'Sync Web Data'}
                     </motion.button>
                     <motion.button
                       whileTap={{ scale: 0.9 }}

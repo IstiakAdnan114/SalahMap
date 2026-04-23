@@ -1,5 +1,6 @@
 import { Mosque, PrayerTimes, getDistance } from '../types';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import staticMosques from '../data/mosques.json';
 
 const LOCAL_MOSQUES_KEY = 'mosque_finder_local_mosques';
 const LOCAL_TIMES_KEY = 'mosque_finder_local_times';
@@ -84,11 +85,38 @@ export const mosqueService = {
   // New method to search the local master list instantly
   searchMasterList(lat: number, lon: number, radiusMeters: number): Mosque[] {
     const removedIds = JSON.parse(localStorage.getItem(LOCAL_REMOVED_KEY) || '[]');
-    return masterMosqueList.filter(m => {
+    // Combine static DB with the dynamically discovered master list
+    const combinedList = [...(staticMosques as Mosque[]), ...masterMosqueList];
+    
+    // Use a Map for de-duplication (prefer Master list data if IDs overlap)
+    const uniqueMap = new Map<string, Mosque>();
+    combinedList.forEach(m => uniqueMap.set(m.id, m));
+
+    return Array.from(uniqueMap.values()).filter(m => {
       if (removedIds.includes(m.id) || m.is_deleted) return false;
       const dist = getDistance(lat, lon, m.latitude, m.longitude);
       return dist * 1000 <= radiusMeters;
     });
+  },
+
+  // Search by name/keyword across all known mosques
+  searchByKeyword(query: string): Mosque[] {
+    const term = query.toLowerCase().trim();
+    if (!term) return [];
+    
+    const removedIds = JSON.parse(localStorage.getItem(LOCAL_REMOVED_KEY) || '[]');
+    const combinedList = [...(staticMosques as Mosque[]), ...masterMosqueList];
+    
+    const uniqueMap = new Map<string, Mosque>();
+    combinedList.forEach(m => uniqueMap.set(m.id, m));
+
+    return Array.from(uniqueMap.values())
+      .filter(m => {
+        if (removedIds.includes(m.id) || m.is_deleted) return false;
+        return m.name.toLowerCase().includes(term) || 
+               (m.address && m.address.toLowerCase().includes(term));
+      })
+      .slice(0, 50); // Limit results for performance
   },
 
   // Add mosques to the master list
