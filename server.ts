@@ -25,10 +25,11 @@ async function startServer() {
 
     for (const endpoint of endpoints) {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout per endpoint
+      const timeoutId = setTimeout(() => controller.abort(), 12000); // 12 second timeout per endpoint
 
       try {
-        const response = await fetch(`${endpoint}?data=${encodeURIComponent(data)}`, {
+        const url = `${endpoint}?data=${encodeURIComponent(data)}`;
+        const response = await fetch(url, {
           signal: controller.signal,
           headers: {
             'Accept': 'application/json',
@@ -42,16 +43,22 @@ async function startServer() {
           const contentType = response.headers.get('content-type');
           if (contentType && contentType.includes('application/json')) {
             const body = await response.json();
-            return res.json(body);
+            // Basic validation of Overpass JSON
+            if (body && Array.isArray(body.elements)) {
+              return res.json(body);
+            }
           }
         }
       } catch (err) {
         clearTimeout(timeoutId);
-        console.error(`Error fetching from ${endpoint}:`, err instanceof Error ? err.message : String(err));
+        console.error(`Proxy error for ${endpoint}:`, err instanceof Error ? err.name : 'Unknown');
       }
     }
 
-    res.status(504).json({ error: "All Overpass endpoints timed out or failed. Please try again in 5 seconds." });
+    res.status(504).json({ 
+      error: "Overpass API is currently busy or slow. Please try moving the map slightly or wait a few seconds.",
+      code: "OVERPASS_TIMEOUT"
+    });
   });
 
   app.get("/api/search", async (req, res) => {
