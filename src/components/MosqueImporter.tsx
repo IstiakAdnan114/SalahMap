@@ -36,7 +36,7 @@ export const MosqueImporter: React.FC = () => {
   };
 
   return (
-    <div className="fixed bottom-24 left-4 z-[9999]">
+    <div className="fixed bottom-24 left-4 z-[99999] flex flex-col items-start gap-2">
       <input
         type="file"
         ref={fileInputRef}
@@ -48,23 +48,28 @@ export const MosqueImporter: React.FC = () => {
       <button
         onClick={() => fileInputRef.current?.click()}
         disabled={isImporting}
-        className={`flex items-center gap-2 px-5 py-3 rounded-2xl shadow-2xl transition-all border-2 border-white ${
+        className={`flex items-center gap-3 px-6 py-4 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] transition-all border-4 border-white ${
           isImporting 
-            ? 'bg-slate-200 text-slate-500 cursor-not-allowed' 
-            : 'bg-emerald-600 text-white hover:bg-emerald-700 hover:scale-105 active:scale-95'
+            ? 'bg-slate-300 text-slate-600 cursor-not-allowed' 
+            : 'bg-emerald-600 text-white hover:bg-emerald-500 hover:scale-110 active:scale-95'
         }`}
         title="Admin: Import OSM export.json"
       >
         {isImporting ? (
-          <Loader2 className="w-4 h-4 animate-spin" />
+          <Loader2 className="w-6 h-6 animate-spin" />
         ) : result?.success ? (
-          <Check className="w-4 h-4" />
+          <Check className="w-6 h-6" />
         ) : (
-          <Download className="w-4 h-4" />
+          <Download className="w-6 h-6" />
         )}
-        <span className="text-sm font-medium">
-          {isImporting ? 'Processing Database...' : result?.success ? `Synced ${result.count} Mosques!` : 'Bulk Import (OSM JSON)'}
-        </span>
+        <div className="flex flex-col items-start leading-tight">
+          <span className="text-sm font-bold uppercase tracking-wider">
+            {isImporting ? 'Processing Database...' : result?.success ? `Success!` : 'Bulk Import Data'}
+          </span>
+          <span className="text-[10px] opacity-80 font-medium">
+            {result?.success ? `${result.count} mosques added` : 'Select OSM .json file'}
+          </span>
+        </div>
       </button>
 
       {result?.success === false && (
