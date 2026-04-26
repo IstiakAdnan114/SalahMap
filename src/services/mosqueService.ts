@@ -105,38 +105,41 @@ export const mosqueService = {
     saveMasterList();
   },
 
-  async fetchNearbyFromOSM(lat: number, lon: number, radius: number = 500, forceRefresh: boolean = false): Promise<Mosque[]> {
+  async fetchNearbyFromOSM(lat: number, lon: number, radius: number = 1000, forceRefresh: boolean = false): Promise<Mosque[]> {
     const removedIds = JSON.parse(localStorage.getItem(LOCAL_REMOVED_KEY) || '[]');
-    // Round coordinates to ~50m to increase cache hits (0.0005 is roughly 50m)
-    const cacheKey = `${lat.toFixed(4)}_${lon.toFixed(4)}_${radius}`;
+    // Use a larger query radius for Overpass than the display radius to pre-fetch nearby mosques
+    const queryRadius = Math.max(radius, 1500);
+    // Round coordinates to ~100m for better cache hits (0.001 is ~110m)
+    const cacheKey = `${lat.toFixed(3)}_${lon.toFixed(3)}_${queryRadius}`;
     
     if (!forceRefresh) {
       // 1. Check permanent cache
       const cached = osmCache.get(cacheKey);
       if (cached) {
-        console.log('Returning cached OSM data (Permanent)');
+        console.log(`Returning cached OSM data for key: ${cacheKey}`);
         return cached.data.filter(m => !removedIds.includes(m.id));
       }
 
-      // 2. Check if master list already has 5+ mosques in this area
-      // This fulfills the requirement: "Skip the OSM call entirely if the master list already has 5 or more mosques"
-      const localResults = this.searchMasterList(lat, lon, radius);
-      if (localResults.length >= 5) {
-        console.log('Skipping OSM call: Master list already has 5+ mosques');
-        // Still mark as cached so we don't keep checking this area
+      // 2. Check if master list already has enough mosques in this area
+      // We search with the actual query radius to see if we've already covered this ground
+      const localResults = this.searchMasterList(lat, lon, queryRadius);
+      if (localResults.length >= 8) {
+        console.log(`Skipping OSM call: Master list already has ${localResults.length} mosques in this 1500m zone`);
+        // Still mark as cached so we don't keep checking this same zone
         osmCache.set(cacheKey, { data: localResults, timestamp: Date.now() });
         saveCacheToLocal();
         return localResults.filter(m => !removedIds.includes(m.id));
       }
     }
 
+    console.log(`Fetching from Overpass: ${lat}, ${lon} (Radius: ${queryRadius}m)`);
     // Faster query: limit to nodes and ways (relations are rare for mosques and slow to process)
-    // Also use a shorter timeout
+    // Use a reasonable timeout to handle crowded areas
     const query = `
-      [out:json][timeout:5];
+      [out:json][timeout:15];
       (
-        node["amenity"="place_of_worship"]["religion"="muslim"](around:${radius},${lat},${lon});
-        way["amenity"="place_of_worship"]["religion"="muslim"](around:${radius},${lat},${lon});
+        node["amenity"="place_of_worship"]["religion"="muslim"](around:${queryRadius},${lat},${lon});
+        way["amenity"="place_of_worship"]["religion"="muslim"](around:${queryRadius},${lat},${lon});
       );
       out center;
     `;
@@ -157,7 +160,7 @@ export const mosqueService = {
         if (response.status === 504 || response.status === 429 || response.status === 502) {
           if (retryCount < 1) {
             console.log(`Retrying Overpass fetch (attempt ${retryCount + 1}) due to status ${response.status}`);
-            await new Promise(resolve => setTimeout(resolve, 2000 * (retryCount + 1)));
+            await new Promise(resolve => setTimeout(resolve, 3000 * (retryCount + 1)));
             return fetchWithRetry(endpointIndex, retryCount + 1);
           }
         }

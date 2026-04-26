@@ -25,7 +25,7 @@ async function startServer() {
 
     for (const endpoint of endpoints) {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout per endpoint
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout per endpoint
 
       try {
         const response = await fetch(`${endpoint}?data=${encodeURIComponent(data)}`, {

@@ -15,7 +15,7 @@ import { Map as MapIcon, List, Bookmark, Settings } from 'lucide-react';
 export default function App() {
   const [mapCenter, setMapCenter] = useState<[number, number]>(COUNTRY_CENTER);
   const [activeTab, setActiveTab] = useState<'map' | 'list' | 'saved'>('map');
-  const [searchRadius, setSearchRadius] = useState(500);
+  const [searchRadius, setSearchRadius] = useState(1000);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
   const [mosques, setMosques] = useState<Mosque[]>([]);
@@ -120,9 +120,9 @@ export default function App() {
     if (isInitialLoading || forceRefresh) setLoading(true);
     setIsSyncing(true);
     
-    // Reset mosques for the new location to avoid confusion, 
-    // but we'll fill them back in incrementally
-    if (!forceRefresh) setMosques([]);
+    // We don't clear mosques immediately to prevent flickering. 
+    // The updateMosques function handles merging/deduplication.
+    // if (!forceRefresh) setMosques([]);
 
     const updateMosques = (newMosques: Mosque[]) => {
       if (currentFetchId !== fetchIdRef.current) return;
@@ -562,7 +562,7 @@ export default function App() {
                     </motion.button>
                     <motion.button
                       whileTap={{ scale: 0.9 }}
-                      onClick={() => fetchMosques(mapCenter[0], mapCenter[1], searchRadius, true)}
+                      onClick={() => fetchMosques(mapCenter[0], mapCenter[1], Math.max(searchRadius, 2000), true)}
                       disabled={isSyncing}
                       className={`h-12 px-4 rounded-2xl shadow-xl flex items-center gap-2 border border-slate-100 font-bold text-sm transition-all ${
                         isSyncing ? 'bg-slate-50 text-slate-400' : 'bg-white text-[#0F7A5C]'
