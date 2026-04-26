@@ -105,41 +105,38 @@ export const mosqueService = {
     saveMasterList();
   },
 
-  async fetchNearbyFromOSM(lat: number, lon: number, radius: number = 1000, forceRefresh: boolean = false): Promise<Mosque[]> {
+  async fetchNearbyFromOSM(lat: number, lon: number, radius: number = 500, forceRefresh: boolean = false): Promise<Mosque[]> {
     const removedIds = JSON.parse(localStorage.getItem(LOCAL_REMOVED_KEY) || '[]');
-    // Use a larger query radius for Overpass than the display radius to pre-fetch nearby mosques
-    const queryRadius = Math.max(radius, 1500);
-    // Round coordinates to ~100m for better cache hits (0.001 is ~110m)
-    const cacheKey = `${lat.toFixed(3)}_${lon.toFixed(3)}_${queryRadius}`;
+    // Round coordinates to ~50m to increase cache hits (0.0005 is roughly 50m)
+    const cacheKey = `${lat.toFixed(4)}_${lon.toFixed(4)}_${radius}`;
     
     if (!forceRefresh) {
       // 1. Check permanent cache
       const cached = osmCache.get(cacheKey);
       if (cached) {
-        console.log(`Returning cached OSM data for key: ${cacheKey}`);
+        console.log('Returning cached OSM data (Permanent)');
         return cached.data.filter(m => !removedIds.includes(m.id));
       }
 
-      // 2. Check if master list already has enough mosques in this area
-      // We search with the actual query radius to see if we've already covered this ground
-      const localResults = this.searchMasterList(lat, lon, queryRadius);
-      if (localResults.length >= 8) {
-        console.log(`Skipping OSM call: Master list already has ${localResults.length} mosques in this 1500m zone`);
-        // Still mark as cached so we don't keep checking this same zone
+      // 2. Check if master list already has 5+ mosques in this area
+      // This fulfills the requirement: "Skip the OSM call entirely if the master list already has 5 or more mosques"
+      const localResults = this.searchMasterList(lat, lon, radius);
+      if (localResults.length >= 5) {
+        console.log('Skipping OSM call: Master list already has 5+ mosques');
+        // Still mark as cached so we don't keep checking this area
         osmCache.set(cacheKey, { data: localResults, timestamp: Date.now() });
         saveCacheToLocal();
         return localResults.filter(m => !removedIds.includes(m.id));
       }
     }
 
-    console.log(`Fetching from Overpass: ${lat}, ${lon} (Radius: ${queryRadius}m)`);
     // Faster query: limit to nodes and ways (relations are rare for mosques and slow to process)
-    // Use a reasonable timeout to handle crowded areas
+    // Also use a shorter timeout
     const query = `
-      [out:json][timeout:15];
+      [out:json][timeout:5];
       (
-        node["amenity"="place_of_worship"]["religion"="muslim"](around:${queryRadius},${lat},${lon});
-        way["amenity"="place_of_worship"]["religion"="muslim"](around:${queryRadius},${lat},${lon});
+        node["amenity"="place_of_worship"]["religion"="muslim"](around:${radius},${lat},${lon});
+        way["amenity"="place_of_worship"]["religion"="muslim"](around:${radius},${lat},${lon});
       );
       out center;
     `;
@@ -151,35 +148,26 @@ export const mosqueService = {
     ];
 
     const fetchWithRetry = async (endpointIndex: number, retryCount: number): Promise<Mosque[]> => {
-      // Use our internal proxy route to avoid CORS issues on production (Vercel)
-      const url = `/api/overpass?data=${encodeURIComponent(query)}`;
+      const url = `${endpoints[endpointIndex]}?data=${encodeURIComponent(query)}`;
       
       try {
         const response = await fetch(url);
         
-        if (response.status === 504 || response.status === 429 || response.status === 502) {
+        if (response.status === 504 || response.status === 429) {
           if (retryCount < 2) {
-            console.log(`Retrying Overpass fetch (attempt ${retryCount + 1}) due to status ${response.status}`);
-            await new Promise(resolve => setTimeout(resolve, 5000));
-            return fetchWithRetry(endpointIndex, retryCount + 1);
+            const nextIndex = (endpointIndex + 1) % endpoints.length;
+            await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+            return fetchWithRetry(nextIndex, retryCount + 1);
           }
+        }
+
+        if (!response.ok) {
+          throw new Error(`Overpass API responded with status: ${response.status}`);
         }
 
         const contentType = response.headers.get('content-type');
-        const isJson = contentType && contentType.includes('application/json');
-
-        if (!response.ok) {
-          if (isJson) {
-            const errorBody = await response.json().catch(() => ({}));
-            throw new Error(errorBody.error || `Server responded with status: ${response.status}`);
-          } else {
-            throw new Error(`Server responded with status: ${response.status}`);
-          }
-        }
-
-        if (!isJson) {
-           console.warn(`Overpass proxy returned non-JSON response: status ${response.status}, contentType: ${contentType}`);
-           return [];
+        if (!contentType || !contentType.includes('application/json')) {
+          throw new Error('Overpass API returned non-JSON response');
         }
 
         const data = await response.json();

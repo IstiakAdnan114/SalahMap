@@ -32,7 +32,7 @@ SalahMap is a community-driven, real-time platform designed to help Muslims in B
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/IstiakAdnan114/salahmap.git
+   git clone https://github.com/your-username/salahmap.git
    cd salahmap
    ```
 
@@ -89,19 +89,8 @@ CREATE TABLE prayer_times (
   asr_score INTEGER DEFAULT 0,
   maghrib_score INTEGER DEFAULT 0,
   isha_score INTEGER DEFAULT 0,
-  jumua_score INTEGER DEFAULT 0,
-  fajr_upvotes INTEGER DEFAULT 0,
-  fajr_downvotes INTEGER DEFAULT 0,
-  dhuhr_upvotes INTEGER DEFAULT 0,
-  dhuhr_downvotes INTEGER DEFAULT 0,
-  asr_upvotes INTEGER DEFAULT 0,
-  asr_downvotes INTEGER DEFAULT 0,
-  maghrib_upvotes INTEGER DEFAULT 0,
-  maghrib_downvotes INTEGER DEFAULT 0,
-  isha_upvotes INTEGER DEFAULT 0,
-  isha_downvotes INTEGER DEFAULT 0,
-  jumua_upvotes INTEGER DEFAULT 0,
-  jumua_downvotes INTEGER DEFAULT 0
+  jumua_score INTEGER DEFAULT 0
+  -- (Additional vote count columns recommended)
 );
 ```
 
@@ -114,52 +103,9 @@ CREATE TABLE votes (
   prayer_name TEXT NOT NULL,
   vote_type TEXT CHECK (vote_type IN ('up', 'down')),
   user_id TEXT NOT NULL,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  UNIQUE(prayer_time_id, user_id, prayer_name)
+  created_at TIMESTAMPTZ DEFAULT now()
 );
 ```
-
-### 4. 🔒 Security & Realtime (Crucial)
-
-To make the app functional and collaborative, you must configure these settings in the Supabase Dashboard:
-
-#### Enable Realtime
-1. Go to **Database** > **Replication**.
-2. Click on **'supabase_realtime'** (or create it).
-3. Toggle the **Source** switch for `mosques`, `prayer_times`, and `votes` tables to enable live updates.
-
-#### Configure RLS (Row Level Security)
-The app uses a community-driven model. Run these queries in the **SQL Editor** to allow public interactions:
-
-```sql
--- 1. Mosques Table Policies
-ALTER TABLE mosques ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow public read" ON mosques FOR SELECT USING (true);
-CREATE POLICY "Allow public insert/update" ON mosques FOR ALL USING (true) WITH CHECK (true);
-
--- 2. Prayer Times Table Policies
-ALTER TABLE prayer_times ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow public read" ON prayer_times FOR SELECT USING (true);
-CREATE POLICY "Allow public insert/update" ON prayer_times FOR ALL USING (true) WITH CHECK (true);
-
--- 3. Votes Table Policies
-ALTER TABLE votes ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow public read" ON votes FOR SELECT USING (true);
-CREATE POLICY "Allow public insert/delete" ON votes FOR ALL USING (true) WITH CHECK (true);
-```
-
-> [!NOTE]
-> These policies allow anyone to contribute. For a production environment, consider hardening these to only allow logged-in users or specific verification logic.
-
-## 🚀 Deployment
-
-The app is ready to be deployed to **Vercel**, **Netlify**, or any static site host. 
-
-### Deployment Steps:
-1. Push your code to a GitHub repository.
-2. Connect the repository to your hosting provider.
-3. Add the `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as Environment Variables in the hosting dashboard.
-4. The build command is `npm run build` and the output directory is `dist`.
 
 ## 📱 Mobile Experience
 
@@ -171,8 +117,6 @@ SalahMap is designed to be added to your home screen. It uses:
 ## 👨‍💻 Developer
 
 **Md. Istiak Adnan**
-- **Email:** [adnanistiak111@gmail.com](mailto:adnanistiak111@gmail.com)
-- **GitHub:** [IstiakAdnan114](https://github.com/IstiakAdnan114)
 
 ## 🤝 Contributing
 
@@ -180,4 +124,4 @@ Contributions are welcome! Whether it's fixing a bug, adding a new feature, or i
 
 ---
 
-**SalahMap** - *Never miss a salah — and help others never miss theirs.*
+**SalahMap** - *Connecting the Ummah, one masjid at a time.*
