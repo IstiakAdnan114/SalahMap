@@ -107,26 +107,55 @@ export const mosqueService = {
 
   async fetchNearbyFromOSM(lat: number, lon: number, radius: number = 500, forceRefresh: boolean = false): Promise<Mosque[]> {
     const removedIds = JSON.parse(localStorage.getItem(LOCAL_REMOVED_KEY) || '[]');
-    // Round coordinates to ~50m to increase cache hits (0.0005 is roughly 50m)
     const cacheKey = `${lat.toFixed(4)}_${lon.toFixed(4)}_${radius}`;
     
     if (!forceRefresh) {
       // 1. Check permanent cache
       const cached = osmCache.get(cacheKey);
       if (cached) {
-        console.log('Returning cached OSM data (Permanent)');
         return cached.data.filter(m => !removedIds.includes(m.id));
       }
 
-      // 2. Check if master list already has 5+ mosques in this area
-      // This fulfills the requirement: "Skip the OSM call entirely if the master list already has 5 or more mosques"
+      // 2. Check if master list already has enough mosques
       const localResults = this.searchMasterList(lat, lon, radius);
       if (localResults.length >= 5) {
-        console.log('Skipping OSM call: Master list already has 5+ mosques');
-        // Still mark as cached so we don't keep checking this area
-        osmCache.set(cacheKey, { data: localResults, timestamp: Date.now() });
-        saveCacheToLocal();
         return localResults.filter(m => !removedIds.includes(m.id));
+      }
+
+      // 3. NEW: Check Supabase First (This is the speed boost!)
+      if (isSupabaseConfigured) {
+        try {
+          // Approximate bounding box search for speed
+          const latMargin = radius / 111320; 
+          const lonMargin = radius / (111320 * Math.cos(lat * (Math.PI / 180)));
+          
+          const { data: dbMosques, error } = await supabase
+            .from('mosques')
+            .select('*')
+            .eq('is_deleted', false)
+            .gte('latitude', lat - latMargin)
+            .lte('latitude', lat + latMargin)
+            .gte('longitude', lon - lonMargin)
+            .lte('longitude', lon + lonMargin)
+            .limit(100);
+
+          if (dbMosques && dbMosques.length > 0) {
+            console.log(`Supabase returned ${dbMosques.length} mosques in range`);
+            // Format to match Mosque type
+            const formatted = dbMosques.map(m => ({
+              id: m.id,
+              name: m.name,
+              latitude: m.latitude,
+              longitude: m.longitude,
+              address: m.address
+            }));
+            
+            this.addToMasterList(formatted);
+            return formatted.filter(m => !removedIds.includes(m.id));
+          }
+        } catch (e) {
+          console.error('Supabase fetch error, falling back to OSM:', e);
+        }
       }
     }
 
