@@ -169,13 +169,16 @@ export const mosqueService = {
         const isJson = contentType && contentType.includes('application/json');
 
         if (!response.ok) {
-          const errorBody = isJson ? await response.json().catch(() => ({})) : {};
+          const errorText = await response.text().catch(() => 'No error body');
+          console.error(`Overpass proxy error: status ${response.status}`, errorText);
+          const errorBody = isJson ? JSON.parse(errorText) : {};
           throw new Error(errorBody.error || `Server responded with status: ${response.status}`);
         }
 
         if (!isJson) {
-          console.warn('Overpass proxy returned non-JSON response:', contentType);
-          return [];
+           const text = await response.text().catch(() => 'No body');
+           console.warn(`Overpass proxy returned non-JSON response: status ${response.status}, contentType: ${contentType}`, text.substring(0, 100));
+           return [];
         }
 
         const data = await response.json();
