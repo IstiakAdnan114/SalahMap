@@ -35,7 +35,54 @@ export default function App() {
   const fetchIdRef = useRef(0);
   const [showLabels, setShowLabels] = useState(true);
   const [mosquesVisible, setMosquesVisible] = useState(true);
-  const [selectedMosque, setSelectedMosque] = useState<Mosque | null>(null);
+  const [selectedMosque, setSelectedMosque] = useState<ActiveMosque | null>(null);
+
+  // Real-time Supabase Listener for Global Mosque Updates
+  useEffect(() => {
+    if (!isSupabaseConfigured) return;
+
+    const channel = supabase
+      .channel('public:mosques_global')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'mosques' }, (payload) => {
+        console.log('Real-time mosque update:', payload.eventType, payload.new);
+        
+        if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+          const newMosque = payload.new as Mosque;
+          
+          if (newMosque.is_deleted) {
+            setMosques(prev => prev.filter(m => m.id !== newMosque.id));
+            setSyncedDeletedIds(prev => new Set([...Array.from(prev), newMosque.id]));
+            if (selectedMosque?.id === newMosque.id) setSelectedMosque(null);
+          } else {
+            setMosques(prev => {
+              const index = prev.findIndex(m => m.id === newMosque.id);
+              if (index !== -1) {
+                const next = [...prev];
+                next[index] = newMosque;
+                return next;
+              } else {
+                return [newMosque, ...prev];
+              }
+            });
+            // Update selected mosque if it matches
+            if (selectedMosque?.id === newMosque.id) {
+              setSelectedMosque(newMosque);
+            }
+          }
+        } else if (payload.eventType === 'DELETE') {
+          const id = payload.old.id;
+          setMosques(prev => prev.filter(m => m.id !== id));
+          if (selectedMosque?.id === id) setSelectedMosque(null);
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedMosque?.id]);
+
+  type ActiveMosque = Mosque;
 
   const isAnyModalOpen = isAddModalOpen || !!selectedMosque;
 

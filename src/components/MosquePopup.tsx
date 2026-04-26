@@ -40,6 +40,38 @@ const MosquePopup: React.FC<MosquePopupProps> = ({ mosque, onClose, onDelete, on
     setEditedName(mosque.name);
     setIsEditingName(false);
     checkFavorite();
+
+    // Set up Real-time listener for prayer times of this mosque
+    if (supabase && mosque.id && !mosque.id.startsWith('local-')) {
+      const channel = supabase
+        .channel(`prayer_times:${mosque.id}`)
+        .on('postgres_changes', { 
+          event: '*', 
+          schema: 'public', 
+          table: 'prayer_times',
+          filter: `mosque_id=eq.${mosque.id}`
+        }, async (payload) => {
+          console.log('Real-time prayer time update:', payload);
+          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
+            const newTimes = payload.new as PrayerTimes;
+            setTimes(newTimes);
+            
+            // If the record changed (new ID), we might need to refresh user votes
+            // since votes are linked to prayer_time_id
+            const votes = await mosqueService.getUserVotes(mosque.id);
+            const votesMap: Record<string, 'up' | 'down'> = {};
+            votes.forEach(v => {
+              votesMap[v.prayer_name] = v.vote_type as 'up' | 'down';
+            });
+            setUserVotes(votesMap);
+          }
+        })
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
   }, [mosque.id, mosque.name]);
 
   const checkFavorite = async () => {
