@@ -193,11 +193,9 @@ export default function App() {
           })
         : Promise.resolve();
 
-      // 3. OSM mosques (Only if forced, because it is slow)
-      const osmPromise = (forceRefresh)
-        ? mosqueService.fetchNearbyFromOSM(lat, lon, radius, forceRefresh)
-            .then(updateMosques)
-        : Promise.resolve();
+      // 3. OSM mosques (Always attempt, service handles internal caching/skipping)
+      const osmPromise = mosqueService.fetchNearbyFromOSM(lat, lon, radius, forceRefresh)
+        .then(updateMosques);
 
       // Hide initial loading screen as soon as local or supabase finish
       // or after a short timeout (1s) to keep the app responsive
