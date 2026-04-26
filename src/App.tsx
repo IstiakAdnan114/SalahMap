@@ -188,24 +188,24 @@ export default function App() {
       setMosques(prev => {
         const localRemovedIds = JSON.parse(localStorage.getItem('mosque_finder_removed_ids') || '[]');
         
-        // Strategy: We want LATEST data to win.
-        // We put newMosques first so they overwrite older data in the combined list
+        // Priority logic: We want to preserve any mosques that were already updated in the current state (prev)
+        // especially if they came from a real-time event or a previous Supabase fetch.
+        // Strategically, we combine current state with new data, but we keep the current version if it exists
+        // UNLESS the new data is from Supabase (authoritative).
+        
+        // However, the simplest way is to put AUTHORITATIVE data (Supabase) at the front of the combined list,
+        // and keep the current state for others.
         const combined = [...newMosques, ...prev];
         
-        // Filter out blacklisted ones and duplicates
-        // Duplicates: findIndex will pick the one at the start of the array, which is from newMosques
         const filtered = combined.filter((m, i, a) => {
-          // Rule 1: Don't show if locally deleted
           if (localRemovedIds.includes(m.id)) return false;
-          // Rule 2: Don't show if this object says it is deleted
           if (m.is_deleted) return false;
-          // Rule 3: Don't show if we previously discovered it was deleted in this session
           if (syncedDeletedIds.has(m.id) || deletedInBatch.includes(m.id)) return false;
 
+          // De-duplication: pick the first one found in combined array
           return a.findIndex(t => t.id === m.id) === i;
         });
 
-        // Finally filter by radius
         return filtered.filter(m => {
           const dist = getDistance(lat, lon, m.latitude, m.longitude);
           return dist * 1000 <= radius;
