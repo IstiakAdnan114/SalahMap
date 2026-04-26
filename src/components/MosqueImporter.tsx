@@ -35,9 +35,9 @@ export const MosqueImporter: React.FC = () => {
     }
   };
 
-  const adminPass = import.meta.env.VITE_ADMIN_PASS || 'salah'; // Fallback to 'salah' if env not set
+  const adminPass = String(import.meta.env.VITE_ADMIN_PASS || 'salah').toLowerCase();
   const urlParams = new URLSearchParams(window.location.search);
-  const isAdmin = urlParams.get('admin') === adminPass;
+  const isAdmin = urlParams.get('admin')?.toLowerCase() === adminPass;
 
   return (
     <div className="fixed bottom-24 left-4 z-[99999] flex flex-col items-start gap-2">
