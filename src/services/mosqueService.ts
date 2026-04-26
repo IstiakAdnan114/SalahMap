@@ -158,9 +158,9 @@ export const mosqueService = {
         const response = await fetch(url);
         
         if (response.status === 504 || response.status === 429 || response.status === 502) {
-          if (retryCount < 1) {
+          if (retryCount < 2) {
             console.log(`Retrying Overpass fetch (attempt ${retryCount + 1}) due to status ${response.status}`);
-            await new Promise(resolve => setTimeout(resolve, 4000));
+            await new Promise(resolve => setTimeout(resolve, 5000));
             return fetchWithRetry(endpointIndex, retryCount + 1);
           }
         }
@@ -169,15 +169,16 @@ export const mosqueService = {
         const isJson = contentType && contentType.includes('application/json');
 
         if (!response.ok) {
-          const errorText = await response.text().catch(() => 'No error body');
-          console.error(`Overpass proxy error: status ${response.status}`, errorText);
-          const errorBody = isJson ? JSON.parse(errorText) : {};
-          throw new Error(errorBody.error || `Server responded with status: ${response.status}`);
+          if (isJson) {
+            const errorBody = await response.json().catch(() => ({}));
+            throw new Error(errorBody.error || `Server responded with status: ${response.status}`);
+          } else {
+            throw new Error(`Server responded with status: ${response.status}`);
+          }
         }
 
         if (!isJson) {
-           const text = await response.text().catch(() => 'No body');
-           console.warn(`Overpass proxy returned non-JSON response: status ${response.status}, contentType: ${contentType}`, text.substring(0, 100));
+           console.warn(`Overpass proxy returned non-JSON response: status ${response.status}, contentType: ${contentType}`);
            return [];
         }
 

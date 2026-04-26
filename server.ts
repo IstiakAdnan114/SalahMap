@@ -27,7 +27,7 @@ async function startServer() {
 
     for (const endpoint of endpoints) {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 12000);
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
 
       try {
         console.log(`[Proxy] Trying endpoint: ${endpoint}`);
@@ -55,22 +55,24 @@ async function startServer() {
               console.warn(`[Proxy] ${endpoint} returned JSON but it doesn't look like Overpass format`);
             }
           } else {
-            const text = await response.text();
-            console.warn(`[Proxy] ${endpoint} returned non-JSON. Sample: ${text.substring(0, 100)}`);
+            console.warn(`[Proxy] ${endpoint} returned non-JSON. Likely a redirect or error page.`);
           }
         } else {
+          // If 429 or 504, it might be busy, we can try next endpoint
           console.warn(`[Proxy] ${endpoint} failed with status: ${response.status}`);
         }
       } catch (err) {
         clearTimeout(timeoutId);
-        console.error(`[Proxy] Error for ${endpoint}:`, err instanceof Error ? err.name : 'Unknown');
+        const errName = err instanceof Error ? err.name : 'Unknown';
+        console.error(`[Proxy] Error for ${endpoint}:`, errName);
       }
     }
 
-    console.error("[Proxy] All Overpass endpoints failed or returned non-JSON");
+    console.error("[Proxy] All Overpass endpoints failed or returned unusable data");
     res.status(504).json({ 
-      error: "Overpass API is currently busy or slow. Please try moving the map slightly or wait a few seconds.",
-      code: "OVERPASS_TIMEOUT"
+      error: "Overpass servers are currently overloaded. Please try again in 10-15 seconds.",
+      code: "OVERPASS_BUSY",
+      elements: [] // Return an empty elements array so client processing doesn't crash
     });
   });
 
