@@ -52,27 +52,25 @@ export default function App() {
           if (newMosque.is_deleted) {
             setMosques(prev => prev.filter(m => m.id !== newMosque.id));
             setSyncedDeletedIds(prev => new Set([...Array.from(prev), newMosque.id]));
-            if (selectedMosque?.id === newMosque.id) setSelectedMosque(null);
+            setSelectedMosque(curr => (curr?.id === newMosque.id ? null : curr));
           } else {
             setMosques(prev => {
               const index = prev.findIndex(m => m.id === newMosque.id);
               if (index !== -1) {
                 const next = [...prev];
-                next[index] = newMosque;
+                next[index] = { ...next[index], ...newMosque };
                 return next;
               } else {
                 return [newMosque, ...prev];
               }
             });
             // Update selected mosque if it matches
-            if (selectedMosque?.id === newMosque.id) {
-              setSelectedMosque(newMosque);
-            }
+            setSelectedMosque(curr => (curr?.id === newMosque.id ? { ...curr, ...newMosque } : curr));
           }
         } else if (payload.eventType === 'DELETE') {
-          const id = payload.old.id;
+          const id = (payload.old as any).id;
           setMosques(prev => prev.filter(m => m.id !== id));
-          if (selectedMosque?.id === id) setSelectedMosque(null);
+          setSelectedMosque(curr => (curr?.id === id ? null : curr));
         }
       })
       .subscribe();
@@ -80,7 +78,7 @@ export default function App() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [selectedMosque?.id]);
+  }, []); // Remove dependency to avoid re-subscribing, use functional updates
 
   type ActiveMosque = Mosque;
 
@@ -188,13 +186,8 @@ export default function App() {
       setMosques(prev => {
         const localRemovedIds = JSON.parse(localStorage.getItem('mosque_finder_removed_ids') || '[]');
         
-        // Priority logic: We want to preserve any mosques that were already updated in the current state (prev)
-        // especially if they came from a real-time event or a previous Supabase fetch.
-        // Strategically, we combine current state with new data, but we keep the current version if it exists
-        // UNLESS the new data is from Supabase (authoritative).
-        
-        // However, the simplest way is to put AUTHORITATIVE data (Supabase) at the front of the combined list,
-        // and keep the current state for others.
+        // Priority logic: Authoritative Supabase/Batch data (newMosques) should be at the front
+        // so it overwrites potentially stale or incomplete data in 'prev' during de-duplication.
         const combined = [...newMosques, ...prev];
         
         const filtered = combined.filter((m, i, a) => {
