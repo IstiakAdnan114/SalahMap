@@ -35,14 +35,17 @@ export const MosqueImporter: React.FC = () => {
     }
   };
 
+  const adminPass = import.meta.env.VITE_ADMIN_PASS || 'salah'; // Fallback to 'salah' if env not set
+  const urlParams = new URLSearchParams(window.location.search);
+  const isAdmin = urlParams.get('admin') === adminPass;
+
   return (
     <div className="fixed bottom-24 left-4 z-[99999] flex flex-col items-start gap-2">
       {/* 
         SECRET ADMIN MODE: 
-        Only users who add '?admin=true' or '?admin=salah' to the URL will see this button.
-        Example: your-app-url.com/?admin=true
+        Only users who add '?admin=YOUR_PASSWORD' to the URL will see this button.
       */}
-      {window.location.search.toLowerCase().includes('admin=') ? (
+      {isAdmin ? (
         <>
           <input
             type="file"
