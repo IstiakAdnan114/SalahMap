@@ -119,6 +119,38 @@ CREATE TABLE votes (
 );
 ```
 
+### 4. 🔒 Security & Realtime (Crucial)
+
+To make the app functional and collaborative, you must configure these settings in the Supabase Dashboard:
+
+#### Enable Realtime
+1. Go to **Database** > **Replication**.
+2. Click on **'supabase_realtime'** (or create it).
+3. Toggle the **Source** switch for `mosques`, `prayer_times`, and `votes` tables to enable live updates.
+
+#### Configure RLS (Row Level Security)
+The app uses a community-driven model. Run these queries in the **SQL Editor** to allow public interactions:
+
+```sql
+-- 1. Mosques Table Policies
+ALTER TABLE mosques ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public read" ON mosques FOR SELECT USING (true);
+CREATE POLICY "Allow public insert/update" ON mosques FOR ALL USING (true) WITH CHECK (true);
+
+-- 2. Prayer Times Table Policies
+ALTER TABLE prayer_times ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public read" ON prayer_times FOR SELECT USING (true);
+CREATE POLICY "Allow public insert/update" ON prayer_times FOR ALL USING (true) WITH CHECK (true);
+
+-- 3. Votes Table Policies
+ALTER TABLE votes ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public read" ON votes FOR SELECT USING (true);
+CREATE POLICY "Allow public insert/delete" ON votes FOR ALL USING (true) WITH CHECK (true);
+```
+
+> [!NOTE]
+> These policies allow anyone to contribute. For a production environment, consider hardening these to only allow logged-in users or specific verification logic.
+
 ## 🚀 Deployment
 
 The app is ready to be deployed to **Vercel**, **Netlify**, or any static site host. 

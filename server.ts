@@ -24,18 +24,34 @@ async function startServer() {
     ];
 
     for (const endpoint of endpoints) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout per endpoint
+
       try {
-        const response = await fetch(`${endpoint}?data=${encodeURIComponent(data)}`);
+        const response = await fetch(`${endpoint}?data=${encodeURIComponent(data)}`, {
+          signal: controller.signal,
+          headers: {
+            'Accept': 'application/json',
+            'User-Agent': 'SalahMap/1.0 (https://salahmap.com)'
+          }
+        });
+        
+        clearTimeout(timeoutId);
+
         if (response.ok) {
-          const body = await response.json();
-          return res.json(body);
+          const contentType = response.headers.get('content-type');
+          if (contentType && contentType.includes('application/json')) {
+            const body = await response.json();
+            return res.json(body);
+          }
         }
       } catch (err) {
-        console.error(`Error fetching from ${endpoint}:`, err);
+        clearTimeout(timeoutId);
+        console.error(`Error fetching from ${endpoint}:`, err instanceof Error ? err.message : String(err));
       }
     }
 
-    res.status(502).json({ error: "All Overpass endpoints failed" });
+    res.status(504).json({ error: "All Overpass endpoints timed out or failed. Please try again in 5 seconds." });
   });
 
   app.get("/api/search", async (req, res) => {

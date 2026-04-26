@@ -155,21 +155,23 @@ export const mosqueService = {
         const response = await fetch(url);
         
         if (response.status === 504 || response.status === 429 || response.status === 502) {
-          // If our proxy failed or the backend API was busy, we could retry, 
-          // but we'll keep it simple since the proxy itself handles the multiple endpoints.
           if (retryCount < 1) {
-            await new Promise(resolve => setTimeout(resolve, 1000 * (retryCount + 1)));
+            console.log(`Retrying Overpass fetch (attempt ${retryCount + 1}) due to status ${response.status}`);
+            await new Promise(resolve => setTimeout(resolve, 2000 * (retryCount + 1)));
             return fetchWithRetry(endpointIndex, retryCount + 1);
           }
         }
 
         if (!response.ok) {
-          throw new Error(`Overpass API responded with status: ${response.status}`);
+          const errorBody = await response.json().catch(() => ({ error: 'Unknown server error' }));
+          throw new Error(errorBody.error || `Overpass API responded with status: ${response.status}`);
         }
 
         const contentType = response.headers.get('content-type');
         if (!contentType || !contentType.includes('application/json')) {
-          throw new Error('Overpass API returned non-JSON response');
+          // If it's not JSON but was a 200 OK, it's likely an HTML error from the provider
+          console.error('Expected JSON but received:', contentType);
+          throw new Error('Overpass API returned an invalid response format. Please try again.');
         }
 
         const data = await response.json();
