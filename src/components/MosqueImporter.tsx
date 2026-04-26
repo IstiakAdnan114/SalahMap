@@ -1,6 +1,7 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Download, Check, Loader2, AlertCircle } from 'lucide-react';
 import { mosqueService } from '../services/mosqueService';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
 export const MosqueImporter: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -35,9 +36,31 @@ export const MosqueImporter: React.FC = () => {
     }
   };
 
-  const adminPass = String(import.meta.env.VITE_ADMIN_PASS || 'salah').toLowerCase();
+  const [adminPass, setAdminPass] = useState(import.meta.env.VITE_ADMIN_PASS || 'salah');
+
+  useEffect(() => {
+    // Check for "online" password from Supabase if configured
+    const fetchOnlinePass = async () => {
+      if (!isSupabaseConfigured) return;
+      try {
+        const { data, error } = await supabase
+          .from('app_settings')
+          .select('value')
+          .eq('key', 'admin_password')
+          .maybeSingle();
+        
+        if (data?.value) {
+          setAdminPass(data.value);
+        }
+      } catch (e) {
+        console.warn('Could not fetch online password, using environment default');
+      }
+    };
+    fetchOnlinePass();
+  }, []);
+
   const urlParams = new URLSearchParams(window.location.search);
-  const isAdmin = urlParams.get('admin')?.toLowerCase() === adminPass;
+  const isAdmin = urlParams.get('admin')?.toLowerCase() === adminPass.toLowerCase();
 
   return (
     <div className="fixed bottom-24 left-4 z-[99999] flex flex-col items-start gap-2">
