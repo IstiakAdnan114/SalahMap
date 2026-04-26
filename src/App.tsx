@@ -10,6 +10,7 @@ import MosquePopup from './components/MosquePopup';
 import MosqueList from './components/MosqueList';
 import SavedView from './components/SavedView';
 import SettingsModal from './components/SettingsModal';
+import { MosqueImporter } from './components/MosqueImporter';
 import { Map as MapIcon, List, Bookmark, Settings } from 'lucide-react';
 
 export default function App() {
@@ -698,6 +699,9 @@ export default function App() {
         userLocation={mapCenter}
         onAdd={handleAddMosque}
       />
+      
+      <MosqueImporter />
+
       {loading && mosques.length === 0 && (
         <motion.div 
           initial={{ opacity: 1 }}

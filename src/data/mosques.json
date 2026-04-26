@@ -13,5 +13,12 @@
   { "id": "db-12", "name": "Ghani Mia Mosque", "latitude": 23.9500, "longitude": 90.5833, "address": "Narsingdi, Bangladesh" },
   { "id": "db-13", "name": "Paharpur Buddhist Vihar Mosque", "latitude": 25.0311, "longitude": 88.9772, "address": "Naogaon, Bangladesh" },
   { "id": "db-14", "name": "Kusumba Mosque", "latitude": 24.7533, "longitude": 88.8514, "address": "Manda, Naogaon" },
-  { "id": "db-15", "name": "Atiya Mosque", "latitude": 24.1864, "longitude": 89.9114, "address": "Tangail, Bangladesh" }
+  { "id": "db-15", "name": "Atiya Mosque", "latitude": 24.1864, "longitude": 89.9114, "address": "Tangail, Bangladesh" },
+  { "id": "osm-266876380", "name": "Unnamed Mosque", "latitude": 23.8643104, "longitude": 90.3936015, "address": "Dhaka" },
+  { "id": "osm-387552292", "name": "Minar Mosque/Lalamatia C Block Jame Masjid", "latitude": 23.755332, "longitude": 90.3707364, "address": "Dhaka" },
+  { "id": "osm-387552338", "name": "Sobhanbagh Mosque", "latitude": 23.7542062, "longitude": 90.3762775, "address": "Dhaka" },
+  { "id": "osm-392524954", "name": "Masjidul Akbar", "latitude": 23.802107, "longitude": 90.3503056, "address": "Dhaka" },
+  { "id": "osm-414035701", "name": "BAF Base Bashar Central Mosque", "latitude": 23.7706566, "longitude": 90.3887945, "address": "Dhaka" },
+  { "id": "osm-619030731", "name": "Siddeshwari Mosque", "latitude": 23.7453735, "longitude": 90.4118764, "address": "Dhaka" },
+  { "id": "osm-621452454", "name": "Savar Bazar Jame Mosque", "latitude": 23.8487627, "longitude": 90.2575142, "address": "Savar, Dhaka" }
 ]

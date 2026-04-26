@@ -101,8 +101,66 @@ export const mosqueService = {
 
   // Add mosques to the master list
   addToMasterList(mosques: Mosque[]) {
-    masterMosqueList = [...masterMosqueList, ...mosques];
-    saveMasterList();
+    // Prevent duplicates by checking IDs
+    const existingIds = new Set(masterMosqueList.map(m => m.id));
+    const newMosques = mosques.filter(m => !existingIds.has(m.id));
+    
+    if (newMosques.length > 0) {
+      masterMosqueList = [...masterMosqueList, ...newMosques];
+      saveMasterList();
+    }
+  },
+
+  /**
+   * Fast Import: Processes the OSM export.json format directly.
+   * You can call this from the browser console to bulk-import your data.
+   */
+  async importOsmJson(jsonData: any) {
+    if (!jsonData || !jsonData.elements) {
+      console.error('Invalid JSON format. Expected Overpass API "elements" array.');
+      return 0;
+    }
+
+    const mosques: Mosque[] = jsonData.elements.map((el: any) => ({
+      id: `osm-${el.id}`,
+      name: el.tags?.name || el.tags?.['name:en'] || el.tags?.['name:bn'] || 'Unnamed Mosque',
+      latitude: el.lat || el.center?.lat,
+      longitude: el.lon || el.center?.lon,
+      address: el.tags?.['addr:full'] || el.tags?.['addr:street'] || el.tags?.['addr:city'] || 'Address unknown',
+    })).filter((m: any) => m.latitude && m.longitude);
+
+    console.log(`Processing ${mosques.length} mosques from JSON...`);
+
+    // 1. Add to local Master List for instant display
+    this.addToMasterList(mosques);
+
+    // 2. Sync to Supabase in chunks (if configured)
+    if (isSupabaseConfigured && mosques.length > 0) {
+      console.log('Syncing to Supabase database...');
+      const chunkSize = 50;
+      for (let i = 0; i < mosques.length; i += chunkSize) {
+        const chunk = mosques.slice(i, i + chunkSize).map(m => ({
+          id: m.id,
+          name: m.name,
+          latitude: m.latitude,
+          longitude: m.longitude,
+          address: m.address
+        }));
+        
+        try {
+          const { error } = await supabase
+            .from('mosques')
+            .upsert(chunk, { onConflict: 'id' });
+          
+          if (error) console.error(`Chunk sync error (${i}):`, error);
+          else console.log(`Synced ${Math.min(i + chunkSize, mosques.length)} / ${mosques.length}`);
+        } catch (e) {
+          console.error('Sync failed:', e);
+        }
+      }
+    }
+
+    return mosques.length;
   },
 
   async fetchNearbyFromOSM(lat: number, lon: number, radius: number = 500, forceRefresh: boolean = false): Promise<Mosque[]> {
