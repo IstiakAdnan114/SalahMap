@@ -186,8 +186,10 @@ export default function App() {
       setMosques(prev => {
         const localRemovedIds = JSON.parse(localStorage.getItem('mosque_finder_removed_ids') || '[]');
         
-        // Priority logic: Authoritative Supabase/Batch data (newMosques) should be at the front
-        // so it overwrites potentially stale or incomplete data in 'prev' during de-duplication.
+        // Strategy: We want LATEST data to win.
+        // We put newMosques (fetched from DB/OSM) first so they overwrite older data,
+        // BUT we must be careful not to overwrite a RECENT local edit that hasn't synced yet.
+        // For now, let's stick to: new fetched data wins over current state for de-duplication.
         const combined = [...newMosques, ...prev];
         
         const filtered = combined.filter((m, i, a) => {
@@ -368,14 +370,31 @@ export default function App() {
     const fullyUpdated = { ...current, ...updates };
 
     // 2. Optimistic update in UI
-    setMosques(prev => prev.map(m => m.id === id ? fullyUpdated : m));
+    setMosques(prev => {
+      const index = prev.findIndex(m => m.id === id);
+      if (index !== -1) {
+        const next = [...prev];
+        next[index] = fullyUpdated;
+        return next;
+      }
+      return [fullyUpdated, ...prev];
+    });
+
     if (selectedMosque && selectedMosque.id === id) {
       setSelectedMosque(fullyUpdated);
     }
 
     try {
       // 3. Persist to database
-      await mosqueService.updateMosque(id, fullyUpdated);
+      const result = await mosqueService.updateMosque(id, updates);
+      
+      // If we got a result (successful sync), update again with any server-side defaults
+      if (result) {
+        setMosques(prev => prev.map(m => m.id === id ? { ...m, ...result } : m));
+        if (selectedMosque && selectedMosque.id === id) {
+          setSelectedMosque(curr => curr ? { ...curr, ...result } : null);
+        }
+      }
     } catch (error) {
       console.error('Failed to persist mosque update:', error);
     }

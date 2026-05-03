@@ -99,14 +99,28 @@ export const mosqueService = {
     });
   },
 
-  // Add mosques to the master list
+  // Add or update mosques in the master list
   addToMasterList(mosques: Mosque[]) {
-    // Prevent duplicates by checking IDs
-    const existingIds = new Set(masterMosqueList.map(m => m.id));
-    const newMosques = mosques.filter(m => !existingIds.has(m.id));
+    const nextList = [...masterMosqueList];
+    let changed = false;
+
+    mosques.forEach(newMosque => {
+      const index = nextList.findIndex(m => m.id === newMosque.id);
+      if (index !== -1) {
+        // Update existing (only if data is different)
+        if (JSON.stringify(nextList[index]) !== JSON.stringify(newMosque)) {
+          nextList[index] = { ...nextList[index], ...newMosque };
+          changed = true;
+        }
+      } else {
+        // Add new
+        nextList.push(newMosque);
+        changed = true;
+      }
+    });
     
-    if (newMosques.length > 0) {
-      masterMosqueList = [...masterMosqueList, ...newMosques];
+    if (changed) {
+      masterMosqueList = nextList;
       saveMasterList();
     }
   },
@@ -717,43 +731,63 @@ export const mosqueService = {
   },
 
   async updateMosque(id: string, updates: Partial<Mosque>) {
-    if (isSupabaseConfigured) {
-      try {
-        // If it's an OSM mosque being updated for the first time, we need to UPSERT it
-        // so it becomes a "community" mosque in our database.
-        const { data, error } = await supabase
-          .from('mosques')
-          .upsert({ ...updates, id: id }, { onConflict: 'id' })
-          .select()
-          .single();
-
-        if (!error) {
-          // If update succeeded, also update the master list and local cache
-          this.addToMasterList([data]);
-          return data;
-        }
-        console.error('Supabase sync mosque error:', error);
-      } catch (e) {
-        console.error('Supabase error:', e);
-      }
-    }
-
-    // Local update fallback if Supabase is offline or fails
+    // 0. Update locally for instant feedback
+    this.addToMasterList([{ ...updates, id: id } as Mosque]);
+    
+    // Update local storage fallback
     const localMosques = JSON.parse(localStorage.getItem(LOCAL_MOSQUES_KEY) || '[]');
     const index = localMosques.findIndex((m: Mosque) => m.id === id);
     if (index !== -1) {
       localMosques[index] = { ...localMosques[index], ...updates };
       localStorage.setItem(LOCAL_MOSQUES_KEY, JSON.stringify(localMosques));
-      this.addToMasterList([localMosques[index]]);
-      return localMosques[index];
+    } else {
+      // If it doesn't exist in local, we add it
+      localMosques.push({ ...updates, id } as Mosque);
+      localStorage.setItem(LOCAL_MOSQUES_KEY, JSON.stringify(localMosques));
     }
-    
-    // If it's an OSM mosque being "updated" locally and doesn't exist in LOCAL_MOSQUES_KEY yet
-    const mosqueToSave = { id, ...updates } as Mosque;
-    localMosques.push(mosqueToSave);
-    localStorage.setItem(LOCAL_MOSQUES_KEY, JSON.stringify(localMosques));
-    this.addToMasterList([mosqueToSave]);
-    return mosqueToSave;
+
+    if (isSupabaseConfigured) {
+      try {
+        console.log(`Syncing update for mosque ${id} to Supabase...`);
+        
+        // Use a clean payload to avoid sending extra fields that might break DB constraints (like distance)
+        // or missing columns (like is_deleted)
+        const payload: any = {
+          id: id,
+          name: updates.name,
+          latitude: updates.latitude,
+          longitude: updates.longitude,
+          address: updates.address,
+        };
+
+        // Only include is_deleted if explicitly provided
+        if (updates.is_deleted !== undefined) {
+          payload.is_deleted = updates.is_deleted;
+        }
+
+        const { data, error } = await supabase
+          .from('mosques')
+          .upsert(payload, { onConflict: 'id' })
+          .select()
+          .maybeSingle();
+
+        if (error) {
+          console.error('Supabase sync mosque error:', error);
+          // If error is 422/400, it might be a missing 'is_deleted' column or similar schema mismatch
+          if (error.code === '42703') {
+            console.warn('DB Error: It seems the "is_deleted" column is missing from your "mosques" table. Please add it in Supabase dashboard.');
+          }
+        } else if (data) {
+          console.log('Successfully synced mosque update to Supabase');
+          this.addToMasterList([data]);
+          return data;
+        }
+      } catch (e) {
+        console.error('Supabase error:', e);
+      }
+    }
+
+    return { id, ...updates } as Mosque;
   },
 
   async getLocalMosques(): Promise<Mosque[]> {
