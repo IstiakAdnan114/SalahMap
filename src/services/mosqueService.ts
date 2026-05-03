@@ -688,6 +688,12 @@ export const mosqueService = {
           payload.address = mosqueToSync.address;
         }
 
+        // Safety check for delete-sync: Supabase needs lat/lon for the INSERT part of UPSERT
+        if (!payload.latitude || !payload.longitude) {
+          console.warn(`Cannot sync soft-delete for ${id} to Supabase: missing required coordinates.`);
+          return true;
+        }
+
         const { error } = await supabase
           .from('mosques')
           .upsert(payload, { onConflict: 'id' });
@@ -732,13 +738,24 @@ export const mosqueService = {
 
   async updateMosque(id: string, updates: Partial<Mosque>) {
     // 0. Find current data to ensure we have required fields (lat/lon) for upsert
-    // We check master list first (most recent), then static list
+    // We check master list first (most recent), then static list, then local storage
     let currentData = masterMosqueList.find(m => m.id === id);
+    
     if (!currentData) {
       currentData = (staticMosques as Mosque[]).find(m => m.id === id);
     }
     
-    // We combine current data with updates
+    if (!currentData) {
+      const localMosques = JSON.parse(localStorage.getItem(LOCAL_MOSQUES_KEY) || '[]');
+      currentData = localMosques.find((m: Mosque) => m.id === id);
+    }
+
+    // fallback: if updates itself has what we need
+    if (!currentData && updates.latitude && updates.longitude) {
+      currentData = { ...updates, id } as Mosque;
+    }
+    
+    // Final merge
     const fullyUpdatedLocally = { 
       ...(currentData || {}), 
       ...updates, 
@@ -774,8 +791,9 @@ export const mosqueService = {
         };
 
         // If we still don't have lat/lon (unlikely but safe check), we might have to abort
-        if (!payload.latitude || !payload.longitude) {
-          console.warn(`Aborting sync for mosque ${id}: Missing coordinates.`);
+        if (payload.latitude === undefined || payload.latitude === null || 
+            payload.longitude === undefined || payload.longitude === null) {
+          console.warn(`Aborting sync for mosque ${id}: Missing coordinates.`, payload);
           return fullyUpdatedLocally;
         }
 

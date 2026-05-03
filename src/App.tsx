@@ -175,6 +175,10 @@ export default function App() {
       
       // Update our session-level blacklist with any deleted IDs found from Supabase
       const deletedInBatch = newMosques.filter(m => m.is_deleted).map(m => m.id);
+      
+      // Ensure all fetched mosques are known to the mosqueService for potential later editing
+      mosqueService.addToMasterList(newMosques);
+
       if (deletedInBatch.length > 0) {
         setSyncedDeletedIds(prev => {
           const next = new Set(prev);
@@ -386,7 +390,7 @@ export default function App() {
 
     try {
       // 3. Persist to database
-      const result = await mosqueService.updateMosque(id, updates);
+      const result = await mosqueService.updateMosque(id, fullyUpdated);
       
       // If we got a result (successful sync), update again with any server-side defaults
       if (result) {
