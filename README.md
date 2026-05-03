@@ -4,13 +4,14 @@ SalahMap is a community-driven, real-time platform designed to help Muslims in B
 
 ## ✨ Key Features
 
-- **Interactive Map:** Explore mosques across Bangladesh with an intuitive, mobile-optimized map interface.
-- **Community-Driven Prayer Times:** Add, update, and verify prayer times for any masjid. There are no "guesses"—times only show up once a community member confirms them.
-- **Verification System:** High-confidence prayer times are marked as "Verified" based on community upvotes, while unreliable times are flagged.
-- **Mobile Optimized:** A sleek, "Locked-to-Screen" mobile experience with dynamic viewport handling and safe-area inset support (notches, home bars).
-- **Offline Resilience:** Local caching ensures you can see your saved mosques even with a spotty connection.
-- **One-Tap Navigation:** Instantly open Google Maps for turn-by-turn directions to any masjid.
-- **Real-Time Sync:** Changes made by one user are instantly visible to everyone else across the globe.
+- **Find Nearby Mosques** — Instantly discover mosques around you using real OpenStreetMap data
+- **Community Prayer Times** — View and contribute accurate Jamat times for any mosque
+- **Crowdsourced Accuracy** — Upvote or downvote prayer times to build community trust scores
+- **Jumua Support** — See which mosques offer Friday prayers and their specific times
+- **Community Editing** — Help improve mosque names and details for everyone
+- **Works Offline** — Cached data means the app works even with poor connectivity
+- **Real-Time Sync** — Changes by any user instantly reflect for everyone
+- **One-Tap Navigation** — Open Google Maps directions to any mosque instantly
 
 ## 🛠️ Tech Stack
 
@@ -32,7 +33,7 @@ SalahMap is a community-driven, real-time platform designed to help Muslims in B
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/your-username/salahmap.git
+   git clone https://github.com/IstiakAdnan114/SalahMap.git
    cd salahmap
    ```
 
@@ -76,21 +77,32 @@ Stores community-submitted schedules and confidence scores.
 ```sql
 CREATE TABLE prayer_times (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  mosque_id TEXT REFERENCES mosques(id),
+  mosque_id TEXT REFERENCES mosques(id) ON DELETE CASCADE,
   fajr TEXT,
   dhuhr TEXT,
   asr TEXT,
   maghrib TEXT,
   isha TEXT,
-  jumua TEXT,
+  jumua TEXT, -- Nullable if not offered
   updated_at TIMESTAMPTZ DEFAULT now(),
   fajr_score INTEGER DEFAULT 0,
   dhuhr_score INTEGER DEFAULT 0,
   asr_score INTEGER DEFAULT 0,
   maghrib_score INTEGER DEFAULT 0,
   isha_score INTEGER DEFAULT 0,
-  jumua_score INTEGER DEFAULT 0
-  -- (Additional vote count columns recommended)
+  jumua_score INTEGER DEFAULT 0,
+  fajr_upvotes INTEGER DEFAULT 0,
+  fajr_downvotes INTEGER DEFAULT 0,
+  dhuhr_upvotes INTEGER DEFAULT 0,
+  dhuhr_downvotes INTEGER DEFAULT 0,
+  asr_upvotes INTEGER DEFAULT 0,
+  asr_downvotes INTEGER DEFAULT 0,
+  maghrib_upvotes INTEGER DEFAULT 0,
+  maghrib_downvotes INTEGER DEFAULT 0,
+  isha_upvotes INTEGER DEFAULT 0,
+  isha_downvotes INTEGER DEFAULT 0,
+  jumua_upvotes INTEGER DEFAULT 0,
+  jumua_downvotes INTEGER DEFAULT 0
 );
 ```
 
@@ -117,6 +129,8 @@ SalahMap is designed to be added to your home screen. It uses:
 ## 👨‍💻 Developer
 
 **Md. Istiak Adnan**
+- Email: adnanistiak111@gmail.com
+- Built with ❤️ for the Ummah.
 
 ## 🤝 Contributing
 
@@ -124,4 +138,4 @@ Contributions are welcome! Whether it's fixing a bug, adding a new feature, or i
 
 ---
 
-**SalahMap** - *Connecting the Ummah, one masjid at a time.*
+**SalahMap** — *Never miss a salah — and help others never miss theirs.*
