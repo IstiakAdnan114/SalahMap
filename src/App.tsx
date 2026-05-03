@@ -402,27 +402,73 @@ export default function App() {
 
   return (
     <div className="h-full w-full bg-[#F8F9FA] overflow-hidden flex flex-col font-sans">
-      {/* Header / Search Bar */}
-      <div className="absolute top-0 left-0 right-0 z-[700] p-4 pt-[calc(1rem+env(safe-area-inset-top))] pointer-events-none">
-        <form onSubmit={handleSearch} className="max-w-md mx-auto flex gap-2 pointer-events-auto">
-          <div className="flex-1 bg-white rounded-2xl shadow-xl flex items-center px-4 py-3 border border-slate-100">
-            <Search className="w-5 h-5 text-slate-400 mr-3" />
-            <input 
-              type="text" 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search city or area..." 
-              className="bg-transparent border-none outline-none text-slate-800 w-full font-medium"
-            />
-            <button
-              type="submit"
-              className="p-1 hover:bg-slate-50 rounded-lg transition-colors text-[#0F7A5C]"
-              title="Search"
-            >
-              <Search className="w-5 h-5" />
-            </button>
-          </div>
-        </form>
+      {/* Header / Search Bar or Page Title */}
+      <div className={`fixed top-0 left-0 right-0 z-[700] transition-all duration-300 ${
+        activeTab === 'map' 
+          ? 'p-4 pt-[calc(1rem+env(safe-area-inset-top))] pointer-events-none' 
+          : `pb-4 px-4 pt-[calc(1rem+env(safe-area-inset-top))] pointer-events-none border-b border-slate-200 shadow-sm ${
+              activeTab === 'list' ? 'bg-white' : 'bg-slate-50'
+            }`
+      }`}>
+        <div className="max-w-md mx-auto pointer-events-auto">
+          <AnimatePresence mode="wait">
+            {activeTab === 'map' ? (
+              <motion.form 
+                key="search"
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                onSubmit={handleSearch} 
+                className="flex gap-2"
+              >
+                <div className="flex-1 bg-white rounded-2xl shadow-xl flex items-center px-4 py-3 border border-slate-100">
+                  <Search className="w-5 h-5 text-slate-400 mr-3" />
+                  <input 
+                    type="text" 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search city or area..." 
+                    className="bg-transparent border-none outline-none text-slate-800 w-full font-medium"
+                  />
+                  <button
+                    type="submit"
+                    className="p-1 hover:bg-slate-50 rounded-lg transition-colors text-[#0F7A5C]"
+                    title="Search"
+                  >
+                    <Search className="w-5 h-5" />
+                  </button>
+                </div>
+              </motion.form>
+            ) : (
+              <motion.div
+                key="title"
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="bg-[#0F7A5C] rounded-2xl shadow-xl py-3 px-6 flex items-center justify-between border-2 border-white/20"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center text-white">
+                    {activeTab === 'list' ? <List className="w-5 h-5" /> : <Bookmark className="w-5 h-5 fill-current" />}
+                  </div>
+                  <h1 className="text-white font-black text-lg tracking-tight">
+                    {activeTab === 'list' ? 'Nearest Mosques' : 'Saved Mosques'}
+                  </h1>
+                </div>
+                {activeTab === 'list' && mosques.length > 0 && (
+                  <span className="text-[10px] font-black text-white/60 bg-white/10 px-2 py-1 rounded-lg uppercase tracking-widest">
+                    {mosques.length} Found
+                  </span>
+                )}
+                {activeTab === 'saved' && (
+                  <div className="text-[10px] font-black text-white/60 uppercase tracking-widest">
+                    Collection
+                  </div>
+                )}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
 
       {/* Geolocation Status Banner */}

@@ -16,7 +16,7 @@ export interface PrayerTimes {
   asr: string;
   maghrib: string;
   isha: string;
-  jumua: string;
+  jumua: string | null;
   updated_at: string;
   fajr_score: number;
   dhuhr_score: number;

@@ -92,16 +92,7 @@ const MosqueList: React.FC<MosqueListProps> = ({ mosques, mapCenter, searchRadiu
 
   return (
     <div className="flex-1 overflow-y-auto bg-white flex flex-col h-full pt-[calc(5rem+env(safe-area-inset-top))]">
-      <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center shrink-0">
-        <div>
-          <h2 className="text-sm font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
-            <Navigation className="w-4 h-4" />
-            Nearest Mosques
-          </h2>
-          <p className="text-[10px] text-slate-400 mt-1">
-            Within {searchRadius >= 1000 ? `${(searchRadius / 1000).toFixed(1)}km` : `${searchRadius}m`} of map center
-          </p>
-        </div>
+      <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-end items-center shrink-0">
         <button 
           onClick={onBack}
           className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[10px] font-bold text-[#0F7A5C] uppercase tracking-wider shadow-sm hover:bg-slate-50 transition-colors"

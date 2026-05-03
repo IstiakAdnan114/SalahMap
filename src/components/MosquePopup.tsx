@@ -34,6 +34,7 @@ const MosquePopup: React.FC<MosquePopupProps> = ({ mosque, onClose, onDelete, on
     isha: '20:00',
     jumua: '13:30'
   });
+  const [hasJumua, setHasJumua] = useState(true);
 
   useEffect(() => {
     loadTimes();
@@ -115,8 +116,9 @@ const MosquePopup: React.FC<MosquePopupProps> = ({ mosque, onClose, onDelete, on
         asr: times.asr,
         maghrib: times.maghrib,
         isha: times.isha,
-        jumua: times.jumua
+        jumua: times.jumua || '13:30'
       });
+      setHasJumua(!!times.jumua);
     }
   }, [times]);
 
@@ -214,7 +216,8 @@ const MosquePopup: React.FC<MosquePopupProps> = ({ mosque, onClose, onDelete, on
     try {
       const updated = await mosqueService.updatePrayerTimes({
         mosque_id: mosque.id,
-        ...formData
+        ...formData,
+        jumua: hasJumua ? formData.jumua : null
       });
       setTimes(updated);
       setIsUpdating(false);
@@ -414,8 +417,8 @@ const MosquePopup: React.FC<MosquePopupProps> = ({ mosque, onClose, onDelete, on
                   { label: 'asr', time: times.asr, score: times.asr_score || 0, up: times.asr_upvotes || 0, down: times.asr_downvotes || 0 },
                   { label: 'maghrib', time: times.maghrib, score: times.maghrib_score || 0, up: times.maghrib_upvotes || 0, down: times.maghrib_downvotes || 0 },
                   { label: 'isha', time: times.isha, score: times.isha_score || 0, up: times.isha_upvotes || 0, down: times.isha_downvotes || 0 },
-                  { label: 'jumua', time: times.jumua, score: times.jumua_score || 0, up: times.jumua_upvotes || 0, down: times.jumua_downvotes || 0 },
-                ].map((p) => {
+                  { label: 'jumua', time: times.jumua, score: times.jumua_score || 0, up: times.jumua_upvotes || 0, down: times.jumua_downvotes || 0, optional: true },
+                ].filter(p => !p.optional || p.time !== null).map((p) => {
                   const total = p.up + p.down;
                   const confidence = total > 0 ? (p.up / total) * 100 : 50;
                   const isVerified = p.score >= 5;
@@ -497,6 +500,12 @@ const MosquePopup: React.FC<MosquePopupProps> = ({ mosque, onClose, onDelete, on
                 })}
               </div>
 
+              {times && !times.jumua && (
+                <div className="bg-slate-50 p-4 rounded-2xl border border-dashed border-slate-200 text-center">
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Jumua prayer not offered here</span>
+                </div>
+              )}
+
               <div className="pt-4 border-t border-slate-100">
                 <button 
                   onClick={() => setIsUpdating(true)}
@@ -527,7 +536,7 @@ const MosquePopup: React.FC<MosquePopupProps> = ({ mosque, onClose, onDelete, on
                   
                   <form onSubmit={handleUpdateTimes} className="space-y-6">
                     <div className="grid grid-cols-2 gap-4">
-                      {['fajr', 'dhuhr', 'asr', 'maghrib', 'isha', 'jumua'].map((p) => (
+                      {['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'].map((p) => (
                         <div key={p}>
                           <label 
                             htmlFor={`time-${p}`}
@@ -546,6 +555,37 @@ const MosquePopup: React.FC<MosquePopupProps> = ({ mosque, onClose, onDelete, on
                           />
                         </div>
                       ))}
+
+                      <div className="col-span-2 bg-white/50 border border-slate-200 rounded-2xl p-4 mt-2">
+                        <label className="flex items-center gap-3 cursor-pointer">
+                          <input 
+                            type="checkbox"
+                            checked={hasJumua}
+                            onChange={(e) => setHasJumua(e.target.checked)}
+                            className="w-5 h-5 rounded border-slate-300 text-[#0F7A5C] focus:ring-[#0F7A5C]"
+                          />
+                          <span className="text-sm font-bold text-slate-700">Jumua prayer is offered here</span>
+                        </label>
+                        
+                        {hasJumua && (
+                          <div className="mt-4">
+                            <label 
+                              htmlFor="time-jumua"
+                              className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1 tracking-widest"
+                            >
+                              Jumua Time
+                            </label>
+                            <input
+                              id="time-jumua"
+                              type="time"
+                              required={hasJumua}
+                              value={formData.jumua}
+                              onChange={(e) => setFormData(prev => ({ ...prev, jumua: e.target.value }))}
+                              className="w-full bg-white border border-slate-200 rounded-2xl px-4 py-3 text-base font-bold text-slate-700 focus:ring-4 focus:ring-[#0F7A5C]/10 focus:border-[#0F7A5C] outline-none transition-all shadow-sm"
+                            />
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <button
                       type="submit"
@@ -583,7 +623,7 @@ const MosquePopup: React.FC<MosquePopupProps> = ({ mosque, onClose, onDelete, on
                   
                   <form onSubmit={handleUpdateTimes} className="space-y-6">
                     <div className="grid grid-cols-2 gap-4">
-                      {['fajr', 'dhuhr', 'asr', 'maghrib', 'isha', 'jumua'].map((p) => (
+                      {['fajr', 'dhuhr', 'asr', 'maghrib', 'isha'].map((p) => (
                         <div key={p}>
                           <label 
                             htmlFor={`add-time-${p}`}
@@ -601,6 +641,37 @@ const MosquePopup: React.FC<MosquePopupProps> = ({ mosque, onClose, onDelete, on
                           />
                         </div>
                       ))}
+
+                      <div className="col-span-2 bg-slate-50 border border-slate-100 rounded-2xl p-4 mt-2">
+                        <label className="flex items-center gap-3 cursor-pointer">
+                          <input 
+                            type="checkbox"
+                            checked={hasJumua}
+                            onChange={(e) => setHasJumua(e.target.checked)}
+                            className="w-5 h-5 rounded border-slate-200 text-[#0F7A5C] focus:ring-[#0F7A5C]"
+                          />
+                          <span className="text-sm font-bold text-slate-600">Jumua prayer is offered here</span>
+                        </label>
+                        
+                        {hasJumua && (
+                          <div className="mt-4">
+                            <label 
+                              htmlFor="add-time-jumua"
+                              className="block text-[10px] font-black text-slate-400 uppercase mb-2 ml-1 tracking-widest"
+                            >
+                              Jumua Time
+                            </label>
+                            <input
+                              id="add-time-jumua"
+                              type="time"
+                              required={hasJumua}
+                              value={formData.jumua}
+                              onChange={(e) => setFormData(prev => ({ ...prev, jumua: e.target.value }))}
+                              className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-4 py-3 text-base font-bold text-slate-700 focus:ring-4 focus:ring-[#0F7A5C]/10 focus:border-[#0F7A5C] outline-none transition-all shadow-sm"
+                            />
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <button
                       type="submit"

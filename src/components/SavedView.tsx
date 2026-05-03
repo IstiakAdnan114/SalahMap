@@ -48,13 +48,6 @@ const SavedView: React.FC<SavedViewProps> = ({ onSelectMosque }) => {
   return (
     <div className="flex-1 bg-slate-50 overflow-y-auto pb-[calc(5rem+env(safe-area-inset-bottom))] pt-[calc(5rem+env(safe-area-inset-top))]">
       <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-black text-slate-900">Saved Mosques</h2>
-          <span className="bg-[#0F7A5C]/10 text-[#0F7A5C] text-xs font-bold px-2.5 py-1 rounded-full uppercase tracking-wider">
-            {savedMosques.length} {savedMosques.length === 1 ? 'Mosque' : 'Mosques'}
-          </span>
-        </div>
-
         <div className="grid gap-4">
           {savedMosques.map((mosque) => (
             <motion.button
