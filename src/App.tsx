@@ -213,7 +213,7 @@ export default function App() {
     };
 
     try {
-      // 0. Instant search from Master List (Your "extra file" idea)
+      // 1. Search locally first for instant feedback (Master List)
       if (!forceRefresh) {
         const masterResults = mosqueService.searchMasterList(lat, lon, radius);
         if (masterResults.length > 0) {
@@ -223,49 +223,17 @@ export default function App() {
         }
       }
 
-      // 1. Local mosques (Instant)
-      const localPromise = forceRefresh ? Promise.resolve() : mosqueService.getLocalMosques().then(updateMosques);
-
-      // 2. Supabase mosques (Fast)
-      const supabasePromise = (isSupabaseConfigured && !forceRefresh)
-        ? supabase
-          .from('mosques')
-          .select('*')
-          .gte('latitude', lat - 0.1)
-          .lte('latitude', lat + 0.1)
-          .gte('longitude', lon - 0.1)
-          .lte('longitude', lon + 0.1)
-          .then(result => {
-            if (result.data) updateMosques(result.data);
-          })
-        : Promise.resolve();
-
-      // 3. OSM mosques (Only if forced, because it is slow)
-      const osmPromise = (forceRefresh)
-        ? mosqueService.fetchNearbyFromOSM(lat, lon, radius, forceRefresh)
-            .then(updateMosques)
-        : Promise.resolve();
-
-      // Hide initial loading screen as soon as local or supabase finish
-      // or after a short timeout (1s) to keep the app responsive
-      if (!forceRefresh) {
-        await Promise.race([
-          Promise.all([localPromise, supabasePromise]),
-          new Promise(resolve => setTimeout(resolve, 1000))
-        ]);
+      // 2. Fetch from authoritative Source of Truth (Supabase + local fallback)
+      const results = await mosqueService.fetchNearby(lat, lon, radius);
+      if (results && results.length > 0) {
+        updateMosques(results);
       }
       
       if (currentFetchId === fetchIdRef.current) {
         setLoading(false);
         setIsInitialLoading(false);
-      }
-
-      // Wait for all remote fetches to complete to stop the syncing indicator
-      await Promise.allSettled([supabasePromise, osmPromise]);
-      if (currentFetchId === fetchIdRef.current) {
         setIsSyncing(false);
       }
-      
     } catch (err) {
       console.error('Fetch mosques error:', err);
       if (currentFetchId === fetchIdRef.current) {
@@ -633,10 +601,10 @@ export default function App() {
                       className={`h-12 px-4 rounded-2xl shadow-xl flex items-center gap-2 border border-slate-100 font-bold text-sm transition-all ${
                         isSyncing ? 'bg-slate-50 text-slate-400' : 'bg-white text-[#0F7A5C]'
                       }`}
-                      title="Sync from Web (Overpass API)"
+                      title="Refresh from Database"
                     >
                       <RefreshCw className={`w-5 h-5 ${isSyncing ? 'animate-spin' : ''}`} />
-                      {isSyncing ? 'Syncing...' : 'Sync Web Data'}
+                      {isSyncing ? 'Refreshing...' : 'Refresh Data'}
                     </motion.button>
                     <motion.button
                       whileTap={{ scale: 0.9 }}
