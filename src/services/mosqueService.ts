@@ -731,18 +731,31 @@ export const mosqueService = {
   },
 
   async updateMosque(id: string, updates: Partial<Mosque>) {
-    // 0. Update locally for instant feedback
-    this.addToMasterList([{ ...updates, id: id } as Mosque]);
+    // 0. Find current data to ensure we have required fields (lat/lon) for upsert
+    // We check master list first (most recent), then static list
+    let currentData = masterMosqueList.find(m => m.id === id);
+    if (!currentData) {
+      currentData = (staticMosques as Mosque[]).find(m => m.id === id);
+    }
+    
+    // We combine current data with updates
+    const fullyUpdatedLocally = { 
+      ...(currentData || {}), 
+      ...updates, 
+      id: id 
+    } as Mosque;
+
+    // 1. Update locally for instant feedback
+    this.addToMasterList([fullyUpdatedLocally]);
     
     // Update local storage fallback
     const localMosques = JSON.parse(localStorage.getItem(LOCAL_MOSQUES_KEY) || '[]');
     const index = localMosques.findIndex((m: Mosque) => m.id === id);
     if (index !== -1) {
-      localMosques[index] = { ...localMosques[index], ...updates };
+      localMosques[index] = fullyUpdatedLocally;
       localStorage.setItem(LOCAL_MOSQUES_KEY, JSON.stringify(localMosques));
     } else {
-      // If it doesn't exist in local, we add it
-      localMosques.push({ ...updates, id } as Mosque);
+      localMosques.push(fullyUpdatedLocally);
       localStorage.setItem(LOCAL_MOSQUES_KEY, JSON.stringify(localMosques));
     }
 
@@ -750,15 +763,21 @@ export const mosqueService = {
       try {
         console.log(`Syncing update for mosque ${id} to Supabase...`);
         
-        // Use a clean payload to avoid sending extra fields that might break DB constraints (like distance)
-        // or missing columns (like is_deleted)
+        // Supabase needs latitude/longitude for the INSERT part of an UPSERT to work
+        // if this is the first time this mosque is hitting the DB.
         const payload: any = {
           id: id,
-          name: updates.name,
-          latitude: updates.latitude,
-          longitude: updates.longitude,
-          address: updates.address,
+          name: fullyUpdatedLocally.name,
+          latitude: fullyUpdatedLocally.latitude,
+          longitude: fullyUpdatedLocally.longitude,
+          address: fullyUpdatedLocally.address || 'Address unknown',
         };
+
+        // If we still don't have lat/lon (unlikely but safe check), we might have to abort
+        if (!payload.latitude || !payload.longitude) {
+          console.warn(`Aborting sync for mosque ${id}: Missing coordinates.`);
+          return fullyUpdatedLocally;
+        }
 
         // Only include is_deleted if explicitly provided
         if (updates.is_deleted !== undefined) {
@@ -773,10 +792,6 @@ export const mosqueService = {
 
         if (error) {
           console.error('Supabase sync mosque error:', error);
-          // If error is 422/400, it might be a missing 'is_deleted' column or similar schema mismatch
-          if (error.code === '42703') {
-            console.warn('DB Error: It seems the "is_deleted" column is missing from your "mosques" table. Please add it in Supabase dashboard.');
-          }
         } else if (data) {
           console.log('Successfully synced mosque update to Supabase');
           this.addToMasterList([data]);
@@ -787,7 +802,7 @@ export const mosqueService = {
       }
     }
 
-    return { id, ...updates } as Mosque;
+    return fullyUpdatedLocally;
   },
 
   async getLocalMosques(): Promise<Mosque[]> {
