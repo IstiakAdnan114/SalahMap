@@ -49,6 +49,9 @@ export default function App() {
         if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
           const newMosque = payload.new as Mosque;
           
+          // Sync to local cache/master list immediately
+          mosqueService.addToMasterList([newMosque]);
+          
           if (newMosque.is_deleted) {
             setMosques(prev => prev.filter(m => m.id !== newMosque.id));
             setSyncedDeletedIds(prev => new Set([...Array.from(prev), newMosque.id]));
@@ -69,6 +72,8 @@ export default function App() {
           }
         } else if (payload.eventType === 'DELETE') {
           const id = (payload.old as any).id;
+          // We don't have the full object for a hard delete, but we can still remove by ID
+          mosqueService.addToMasterList([{ id, is_deleted: true } as Mosque]);
           setMosques(prev => prev.filter(m => m.id !== id));
           setSelectedMosque(curr => (curr?.id === id ? null : curr));
         }

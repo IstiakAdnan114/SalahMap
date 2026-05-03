@@ -73,14 +73,26 @@ export const mosqueService = {
 
   // Add or update mosques in the master list
   addToMasterList(mosques: Mosque[]) {
-    const nextList = [...masterMosqueList];
+    let nextList = [...masterMosqueList];
     let changed = false;
 
     mosques.forEach(newMosque => {
       const index = nextList.findIndex(m => m.id === newMosque.id);
-      if (index !== -1) {
+      
+      if (newMosque.is_deleted) {
+        // If it's deleted, remove it from local list
+        if (index !== -1) {
+          nextList.splice(index, 1);
+          changed = true;
+        }
+        // Also add to removedIds to prevent re-discovery
+        const removedIds = JSON.parse(localStorage.getItem(LOCAL_REMOVED_KEY) || '[]');
+        if (!removedIds.includes(newMosque.id)) {
+          removedIds.push(newMosque.id);
+          localStorage.setItem(LOCAL_REMOVED_KEY, JSON.stringify(removedIds));
+        }
+      } else if (index !== -1) {
         // Update existing: ALWAYS prioritize newer incoming data (especially from Supabase)
-        // We merge but the newMosque values win
         nextList[index] = { ...nextList[index], ...newMosque };
         changed = true;
       } else {
@@ -164,7 +176,6 @@ export const mosqueService = {
         const { data: dbMosques, error } = await supabase
           .from('mosques')
           .select('*')
-          .eq('is_deleted', false)
           .gte('latitude', lat - latMargin)
           .lte('latitude', lat + latMargin)
           .gte('longitude', lon - lonMargin)
