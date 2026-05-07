@@ -42,7 +42,7 @@ const MosqueList: React.FC<MosqueListProps> = ({ mosques, mapCenter, searchRadiu
     const isFriday = now.getDay() === 5;
     const prayers: { name: string; time: string; minutes: number }[] = [
       { name: 'Fajr', time: times.fajr, minutes: timeToMinutes(times.fajr) },
-      ...(isFriday ? [{ name: "Jumu'ah", time: times.jumua, minutes: timeToMinutes(times.jumua) }] : []),
+      ...(isFriday && times.jumua ? [{ name: "Jumu'ah", time: times.jumua, minutes: timeToMinutes(times.jumua) }] : []),
       { name: 'Dhuhr', time: times.dhuhr, minutes: timeToMinutes(times.dhuhr) },
       { name: 'Asr', time: times.asr, minutes: timeToMinutes(times.asr) },
       { name: 'Maghrib', time: times.maghrib, minutes: timeToMinutes(times.maghrib) },
@@ -73,9 +73,13 @@ const MosqueList: React.FC<MosqueListProps> = ({ mosques, mapCenter, searchRadiu
     return `${hours}:${minutes} ${period}`;
   };
 
-  const timeToMinutes = (timeStr: string) => {
+  const timeToMinutes = (timeStr: string | null) => {
+    if (!timeStr) return 0;
     const [time, period] = timeStr.split(' ');
-    let [hours, minutes] = time.split(':').map(Number);
+    const timeParts = time.split(':');
+    if (timeParts.length < 2) return 0;
+    
+    let [hours, minutes] = timeParts.map(Number);
     
     if (period === 'PM' && hours !== 12) hours += 12;
     if (period === 'AM' && hours === 12) hours = 0;

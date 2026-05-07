@@ -410,6 +410,15 @@ const MosquePopup: React.FC<MosquePopupProps> = ({ mosque, onClose, onDelete, on
             </div>
           ) : times ? (
             <div className="space-y-6 pb-4">
+              <div className="flex items-center gap-2 px-2 py-1">
+                <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center">
+                  <Clock className="w-3.5 h-3.5 text-slate-400" />
+                </div>
+                <div className="text-[11px] text-slate-500">
+                  Last updated <span className="font-bold text-slate-700">{format(new Date(times.updated_at), 'MMM d, hh:mm a')}</span>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 gap-4">
                 {[
                   { label: 'fajr', time: times.fajr, score: times.fajr_score || 0, up: times.fajr_upvotes || 0, down: times.fajr_downvotes || 0 },
@@ -514,15 +523,6 @@ const MosquePopup: React.FC<MosquePopupProps> = ({ mosque, onClose, onDelete, on
                   <Clock className="w-5 h-5" />
                   Update All Prayer Times
                 </button>
-                
-                <div className="flex items-center gap-2 mt-4 px-2">
-                  <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center">
-                    <Clock className="w-4 h-4 text-slate-400" />
-                  </div>
-                  <div className="text-xs text-slate-500">
-                    Last updated <span className="font-bold text-slate-700">{format(new Date(times.updated_at), 'MMM d, hh:mm a')}</span>
-                  </div>
-                </div>
               </div>
 
               {isUpdating && (
