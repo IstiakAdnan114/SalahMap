@@ -5,7 +5,7 @@ import { Mosque, COUNTRY_CENTER, COUNTRY_NAME, isInBounds, getDistance } from '.
 import { mosqueService } from './services/mosqueService';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 import Fuse from 'fuse.js';
-import { Search, Navigation, Plus, Eye, EyeOff, MapPin, MapPinned, RefreshCw, Cloud, CloudOff, Clock } from 'lucide-react';
+import { Search, Navigation, Plus, Eye, EyeOff, MapPin, MapPinned, RefreshCw, Cloud, CloudOff, Clock, Tag, Crosshair, MapPinPlus } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import MosquePopup from './components/MosquePopup';
 import MosqueList from './components/MosqueList';
@@ -47,6 +47,7 @@ export default function App() {
   const [showLabels, setShowLabels] = useState(true);
   const [mosquesVisible, setMosquesVisible] = useState(true);
   const [selectedMosque, setSelectedMosque] = useState<ActiveMosque | null>(null);
+  const [isFabOpen, setIsFabOpen] = useState(false);
 
   // Real-time Supabase Listener for Global Mosque Updates
   useEffect(() => {
@@ -742,76 +743,112 @@ export default function App() {
                   </div>
                 </div>
               )}
-              
-              <AnimatePresence>
+                          <AnimatePresence>
                 {!isAnyModalOpen && (
-                  <motion.div 
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    className="absolute bottom-[calc(6rem+env(safe-area-inset-bottom))] right-4 z-10 flex flex-col gap-3 items-end"
-                  >
-                    <div className="bg-white/80 backdrop-blur-sm px-3 py-1.5 rounded-full shadow-sm border border-slate-100 text-[10px] font-mono text-slate-500 mb-1">
-                      {mapCenter[0].toFixed(4)}, {mapCenter[1].toFixed(4)}
-                    </div>
-                    <motion.button
-                      whileTap={{ scale: 0.9 }}
-                      onClick={handleToggleMosques}
-                      className={`h-12 px-4 rounded-2xl shadow-xl flex items-center gap-2 border border-slate-100 font-bold text-sm transition-all ${
-                        mosquesVisible ? 'bg-[#0F7A5C] text-white' : 'bg-white text-slate-600'
-                      }`}
-                      title={mosquesVisible ? "Hide Mosques" : "Show Mosques"}
-                    >
-                      {loading ? (
-                        <div className={`w-5 h-5 border-2 ${mosquesVisible ? 'border-white' : 'border-[#0F7A5C]'} border-t-transparent rounded-full animate-spin`} />
-                      ) : (
-                        mosquesVisible ? <MapPinned className="w-5 h-5" /> : <MapPin className="w-5 h-5" />
+                  <>
+                    {/* Backdrop for FAB Menu */}
+                    <AnimatePresence>
+                      {isFabOpen && (
+                        <motion.div 
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          onClick={() => setIsFabOpen(false)}
+                          className="absolute inset-0 bg-slate-900/10 backdrop-blur-[1px] z-[850] pointer-events-auto"
+                        />
                       )}
-                      {mosquesVisible ? 'Hide Mosques' : 'Show Mosques'}
-                    </motion.button>
-                    <motion.button
-                      whileTap={{ scale: 0.9 }}
-                      onClick={() => setShowLabels(!showLabels)}
-                      className={`h-12 px-4 rounded-2xl shadow-xl flex items-center gap-2 border border-slate-100 font-bold text-sm transition-all ${
-                        showLabels ? 'bg-[#0F7A5C] text-white' : 'bg-white text-slate-600'
-                      }`}
-                      title={showLabels ? "Hide Labels" : "Show Labels"}
-                    >
-                      {showLabels ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                      {showLabels ? 'Hide Labels' : 'Show Labels'}
-                    </motion.button>
-                    <motion.button
-                      whileTap={{ scale: 0.9 }}
-                      onClick={() => fetchMosques(mapCenter[0], mapCenter[1], searchRadius, true)}
-                      disabled={isSyncing}
-                      className={`h-12 px-4 rounded-2xl shadow-xl flex items-center gap-2 border border-slate-100 font-bold text-sm transition-all ${
-                        isSyncing ? 'bg-slate-50 text-slate-400' : 'bg-white text-[#0F7A5C]'
-                      }`}
-                      title="Refresh from Database"
-                    >
-                      <RefreshCw className={`w-5 h-5 ${isSyncing ? 'animate-spin' : ''}`} />
-                      {isSyncing ? 'Refreshing...' : 'Refresh Data'}
-                    </motion.button>
-                    <motion.button
-                      whileTap={{ scale: 0.9 }}
-                      onClick={handleRecenter}
-                      disabled={isLocating}
-                      className={`h-12 px-4 rounded-2xl shadow-xl flex items-center gap-2 border border-slate-100 font-bold text-sm transition-all ${
-                        isLocating ? 'bg-slate-50 text-slate-400' : 'bg-white text-[#0F7A5C]'
-                      }`}
-                    >
-                      <Navigation className={`w-5 h-5 ${isLocating ? 'animate-pulse' : ''}`} />
-                      {isLocating ? 'Locating...' : 'Locate Me'}
-                    </motion.button>
-                    <motion.button
-                      whileTap={{ scale: 0.9 }}
-                      onClick={() => setIsAddModalOpen(true)}
-                      className="w-12 h-12 bg-[#0F7A5C] rounded-2xl shadow-xl flex items-center justify-center text-white"
-                      title="Add Mosque"
-                    >
-                      <Plus className="w-6 h-6" />
-                    </motion.button>
-                  </motion.div>
+                    </AnimatePresence>
+
+                    {/* FAB Menu Container */}
+                    <div className="absolute bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-4 z-[900] flex flex-col items-end gap-3 pointer-events-none">
+                      <AnimatePresence>
+                        {isFabOpen && (
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.8 }}
+                            className="flex flex-col items-end gap-3 mb-2"
+                          >
+                            {[
+                              { 
+                                icon: MapPinPlus, 
+                                label: 'Add Mosque', 
+                                onClick: () => { setIsAddModalOpen(!isAddModalOpen); setIsFabOpen(false); },
+                                active: isAddModalOpen,
+                                activeColor: 'bg-amber-500',
+                                textColor: 'text-amber-600'
+                              },
+                              { 
+                                icon: Crosshair, 
+                                label: 'Locate Me', 
+                                onClick: () => { handleRecenter(); setIsFabOpen(false); },
+                                loading: isLocating
+                              },
+                              { 
+                                icon: RefreshCw, 
+                                label: 'Refresh Data', 
+                                onClick: () => { fetchMosques(mapCenter[0], mapCenter[1], searchRadius, true); setIsFabOpen(false); },
+                                loading: isSyncing
+                              },
+                              { 
+                                icon: mosquesVisible ? EyeOff : Eye, 
+                                label: mosquesVisible ? 'Hide Mosques' : 'Show Mosques', 
+                                onClick: () => { handleToggleMosques(); },
+                                active: mosquesVisible
+                              },
+                              { 
+                                icon: Tag, 
+                                label: showLabels ? 'Hide Labels' : 'Show Labels', 
+                                onClick: () => { setShowLabels(!showLabels); },
+                                active: showLabels
+                              }
+                            ].map((item, index) => (
+                              <motion.div
+                                key={item.label}
+                                initial={{ opacity: 0, x: 20, y: 10 }}
+                                animate={{ opacity: 1, x: 0, y: 0 }}
+                                transition={{ delay: index * 0.05 }}
+                                className="flex items-center gap-3 pointer-events-auto"
+                              >
+                                <span className={`text-[10px] font-black uppercase tracking-widest px-2.5 py-1 rounded-lg bg-white shadow-xl border border-slate-100 ${item.textColor || 'text-slate-600'}`}>
+                                  {item.label}
+                                </span>
+                                <motion.button
+                                  whileTap={{ scale: 0.9 }}
+                                  onClick={item.onClick}
+                                  className={`w-11 h-11 rounded-full shadow-xl flex items-center justify-center border border-slate-100 transition-colors ${
+                                    item.active 
+                                      ? (item.activeColor || 'bg-[#0F7A5C] text-white') 
+                                      : 'bg-white text-[#0F7A5C]'
+                                  }`}
+                                >
+                                  {item.loading ? (
+                                    <RefreshCw className="w-5 h-5 animate-spin" />
+                                  ) : (
+                                    <item.icon className="w-5 h-5" />
+                                  )}
+                                </motion.button>
+                              </motion.div>
+                            ))}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+
+                      {/* Main FAB Toggle Button */}
+                      <motion.button
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => setIsFabOpen(!isFabOpen)}
+                        className="w-14 h-14 rounded-full bg-[#0F7A5C] text-white shadow-[#0F7A5C]/40 shadow-2xl flex items-center justify-center border-4 border-white pointer-events-auto relative z-[910]"
+                      >
+                        <motion.div
+                          animate={{ rotate: isFabOpen ? 135 : 0 }}
+                          className="flex items-center justify-center"
+                        >
+                          <Plus className="w-8 h-8" strokeWidth={3} />
+                        </motion.div>
+                      </motion.button>
+                    </div>
+                  </>
                 )}
               </AnimatePresence>
             </motion.div>
