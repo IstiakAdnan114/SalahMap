@@ -11,12 +11,9 @@ interface SettingsModalProps {
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, radius, onRadiusChange }) => {
   const radiusOptions = [
-    { label: '500m', value: 500 },
-    { label: '1km', value: 1000 },
-    { label: '1.5km', value: 1500 },
-    { label: '2km', value: 2000 },
-    { label: '3km', value: 3000 },
-    { label: '5km', value: 5000 },
+    { label: 'Nearby (500m)', value: 500 },
+    { label: 'Wider (750m)', value: 750 },
+    { label: 'Far (1km)', value: 1000 },
   ];
 
   return (
