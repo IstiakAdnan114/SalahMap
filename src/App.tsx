@@ -725,35 +725,39 @@ export default function App() {
       <div className="bg-white border-t border-slate-100 px-6 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] flex justify-between items-center z-[700] shrink-0">
         <button 
           onClick={() => setActiveTab('map')}
-          className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'map' ? 'text-[#0F7A5C]' : 'text-slate-400'}`}
+          className={`flex flex-col items-center gap-0.5 transition-colors ${activeTab === 'map' ? 'text-[#0F7A5C]' : 'text-slate-400'}`}
         >
           <div className={`w-1.5 h-1.5 rounded-full transition-all ${activeTab === 'map' ? 'bg-[#0F7A5C] scale-100' : 'bg-transparent scale-0'}`}></div>
           <MapIcon className="w-5 h-5 mb-0.5" />
-          <span className="text-[10px] font-bold uppercase tracking-widest">Map</span>
+          <span className="text-[10px] font-bold uppercase tracking-widest leading-none">Map</span>
+          <span className={`text-[8px] font-medium transition-colors ${activeTab === 'map' ? 'text-[#0F7A5C]/70' : 'text-slate-300'}`}>Find mosques</span>
         </button>
         <button 
           onClick={() => setActiveTab('list')}
-          className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'list' ? 'text-[#0F7A5C]' : 'text-slate-400'}`}
+          className={`flex flex-col items-center gap-0.5 transition-colors ${activeTab === 'list' ? 'text-[#0F7A5C]' : 'text-slate-400'}`}
         >
           <div className={`w-1.5 h-1.5 rounded-full transition-all ${activeTab === 'list' ? 'bg-[#0F7A5C] scale-100' : 'bg-transparent scale-0'}`}></div>
           <List className="w-5 h-5 mb-0.5" />
-          <span className="text-[10px] font-bold uppercase tracking-widest">List</span>
+          <span className="text-[10px] font-bold uppercase tracking-widest leading-none">List</span>
+          <span className={`text-[8px] font-medium transition-colors ${activeTab === 'list' ? 'text-[#0F7A5C]/70' : 'text-slate-300'}`}>Distance & times</span>
         </button>
         <button 
           onClick={() => setActiveTab('saved')}
-          className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'saved' ? 'text-[#0F7A5C]' : 'text-slate-400'}`}
+          className={`flex flex-col items-center gap-0.5 transition-colors ${activeTab === 'saved' ? 'text-[#0F7A5C]' : 'text-slate-400'}`}
         >
           <div className={`w-1.5 h-1.5 rounded-full transition-all ${activeTab === 'saved' ? 'bg-[#0F7A5C] scale-100' : 'bg-transparent scale-0'}`}></div>
           <Bookmark className={`w-5 h-5 mb-0.5 ${activeTab === 'saved' ? 'fill-current' : ''}`} />
-          <span className="text-[10px] font-bold uppercase tracking-widest">Saved</span>
+          <span className="text-[10px] font-bold uppercase tracking-widest leading-none">Saved</span>
+          <span className={`text-[8px] font-medium transition-colors ${activeTab === 'saved' ? 'text-[#0F7A5C]/70' : 'text-slate-300'}`}>Your favourites</span>
         </button>
         <button 
           onClick={() => setIsSettingsModalOpen(true)}
-          className={`flex flex-col items-center gap-1 transition-colors ${isSettingsModalOpen ? 'text-[#0F7A5C]' : 'text-slate-400'}`}
+          className={`flex flex-col items-center gap-0.5 transition-colors ${isSettingsModalOpen ? 'text-[#0F7A5C]' : 'text-slate-400'}`}
         >
           <div className={`w-1.5 h-1.5 rounded-full transition-all ${isSettingsModalOpen ? 'bg-[#0F7A5C] scale-100' : 'bg-transparent scale-0'}`}></div>
           <Settings className="w-5 h-5 mb-0.5" />
-          <span className="text-[10px] font-bold uppercase tracking-widest">Settings</span>
+          <span className="text-[10px] font-bold uppercase tracking-widest leading-none">Settings</span>
+          <span className={`text-[8px] font-medium transition-colors ${isSettingsModalOpen ? 'text-[#0F7A5C]/70' : 'text-slate-300'}`}>Preferences</span>
         </button>
       </div>
 

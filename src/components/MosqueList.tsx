@@ -96,10 +96,17 @@ const MosqueList: React.FC<MosqueListProps> = ({ mosques, mapCenter, searchRadiu
 
   return (
     <div className="flex-1 overflow-y-auto bg-white flex flex-col h-full pt-[calc(5rem+env(safe-area-inset-top))]">
-      <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-end items-center shrink-0">
+      <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center shrink-0">
+        <div className="flex-1 flex items-center">
+          <div className="bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-full flex items-center gap-2 border border-emerald-100/50 shadow-sm transition-all hover:bg-emerald-100">
+            <span className="text-[10px] font-bold tracking-tight whitespace-nowrap">
+              📍 Showing <span className="font-black underline decoration-emerald-300 underline-offset-2">{sortedMosques.length}</span> mosques within <span className="font-black underline decoration-emerald-300 underline-offset-2">{searchRadius >= 1000 ? `${searchRadius / 1000}km` : `${searchRadius}m`}</span> · Sorted by distance
+            </span>
+          </div>
+        </div>
         <button 
           onClick={onBack}
-          className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[10px] font-bold text-[#0F7A5C] uppercase tracking-wider shadow-sm hover:bg-slate-50 transition-colors"
+          className="ml-4 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[10px] font-bold text-[#0F7A5C] uppercase tracking-wider shadow-sm hover:bg-slate-50 transition-colors shrink-0"
         >
           Back to Map
         </button>
