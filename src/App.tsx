@@ -4,7 +4,8 @@ import AddMosqueModal from './components/AddMosqueModal';
 import { Mosque, COUNTRY_CENTER, COUNTRY_NAME, isInBounds, getDistance } from './types';
 import { mosqueService } from './services/mosqueService';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
-import { Search, Navigation, Plus, Eye, EyeOff, MapPin, MapPinned, RefreshCw, Cloud, CloudOff } from 'lucide-react';
+import Fuse from 'fuse.js';
+import { Search, Navigation, Plus, Eye, EyeOff, MapPin, MapPinned, RefreshCw, Cloud, CloudOff, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import MosquePopup from './components/MosquePopup';
 import MosqueList from './components/MosqueList';
@@ -12,6 +13,16 @@ import SavedView from './components/SavedView';
 import SettingsModal from './components/SettingsModal';
 import { MosqueImporter } from './components/MosqueImporter';
 import { Map as MapIcon, List, Bookmark, Settings } from 'lucide-react';
+
+interface Suggestion {
+  id: string;
+  type: 'place' | 'mosque';
+  label: string;
+  subLabel?: string;
+  latitude: number;
+  longitude: number;
+  mosque?: Mosque;
+}
 
 export default function App() {
   const [mapCenter, setMapCenter] = useState<[number, number]>(COUNTRY_CENTER);
@@ -378,6 +389,92 @@ export default function App() {
   };
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isSearchingSuggestions, setIsSearchingSuggestions] = useState(false);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+        setShowSuggestions(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    
+    if (!value.trim()) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      return;
+    }
+
+    setIsSearchingSuggestions(true);
+    setShowSuggestions(true);
+
+    debounceTimerRef.current = setTimeout(async () => {
+      try {
+        // 1. Mosque Suggestions (Fuse.js)
+        const allMosques = mosqueService.getAllMosques();
+        const fuse = new Fuse(allMosques, {
+          keys: ['name', 'address'],
+          threshold: 0.6
+        });
+        const mosqueResults = fuse.search(value)
+          .slice(0, 5)
+          .map(result => ({
+            id: result.item.id,
+            type: 'mosque' as const,
+            label: result.item.name,
+            subLabel: result.item.address,
+            latitude: result.item.latitude,
+            longitude: result.item.longitude,
+            mosque: result.item
+          }));
+
+        // 2. Place Suggestions (Nominatim)
+        const placeResponse = await fetch(`https://nominatim.openstreetmap.org/search?format=json&countrycodes=bd&limit=3&q=${encodeURIComponent(value)}`);
+        const placeData = await placeResponse.json();
+        const placeResults = placeData.map((p: any) => ({
+          id: `place-${p.place_id}`,
+          type: 'place' as const,
+          label: p.display_name.split(',')[0],
+          subLabel: p.display_name.split(',').slice(1).join(',').trim(),
+          latitude: parseFloat(p.lat),
+          longitude: parseFloat(p.lon)
+        }));
+
+        // Combine: Places first, then mosques. Max 5 total.
+        const combined = [...placeResults, ...mosqueResults].slice(0, 5);
+        setSuggestions(combined);
+      } catch (err) {
+        console.error('Suggestions error:', err);
+      } finally {
+        setIsSearchingSuggestions(false);
+      }
+    }, 300);
+  };
+
+  const handleSuggestionSelect = (suggestion: Suggestion) => {
+    setMapCenter([suggestion.latitude, suggestion.longitude]);
+    setForceRecenter(prev => prev + 1);
+    setShowSuggestions(false);
+    setSearchQuery(suggestion.label);
+
+    if (suggestion.type === 'mosque' && suggestion.mosque) {
+      setSelectedMosque(suggestion.mosque);
+    } else {
+      // For places, trigger a fetch of nearby mosques
+      fetchMosques(suggestion.latitude, suggestion.longitude, searchRadius);
+    }
+  };
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -410,36 +507,74 @@ export default function App() {
               activeTab === 'list' ? 'bg-white' : 'bg-slate-50'
             }`
       }`}>
-        <div className="max-w-md mx-auto pointer-events-auto">
-          <AnimatePresence mode="wait">
-            {activeTab === 'map' ? (
-              <motion.form 
-                key="search"
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                onSubmit={handleSearch} 
-                className="flex gap-2"
-              >
-                <div className="flex-1 bg-white rounded-2xl shadow-xl flex items-center px-4 py-3 border border-slate-100">
-                  <Search className="w-5 h-5 text-slate-400 mr-3" />
-                  <input 
-                    type="text" 
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search city or area..." 
-                    className="bg-transparent border-none outline-none text-slate-800 w-full font-medium"
-                  />
-                  <button
-                    type="submit"
-                    className="p-1 hover:bg-slate-50 rounded-lg transition-colors text-[#0F7A5C]"
-                    title="Search"
+          <div ref={searchContainerRef} className="max-w-md mx-auto pointer-events-auto relative">
+            <AnimatePresence mode="wait">
+              {activeTab === 'map' ? (
+                <motion.div 
+                  key="search-container"
+                  className="flex flex-col gap-2"
+                >
+                  <form 
+                    key="search"
+                    onSubmit={handleSearch} 
+                    className="flex gap-2"
                   >
-                    <Search className="w-5 h-5" />
-                  </button>
-                </div>
-              </motion.form>
-            ) : (
+                    <div className="flex-1 bg-white rounded-2xl shadow-xl flex items-center px-4 py-3 border border-slate-100 relative">
+                      <Search className="w-5 h-5 text-slate-400 mr-3" />
+                      <input 
+                        type="text" 
+                        value={searchQuery}
+                        onChange={(e) => handleSearchChange(e.target.value)}
+                        onFocus={() => searchQuery && setShowSuggestions(true)}
+                        placeholder="Search city, area or mosque..." 
+                        className="bg-transparent border-none outline-none text-slate-800 w-full font-medium"
+                      />
+                      {isSearchingSuggestions && (
+                        <RefreshCw className="w-4 h-4 text-[#0F7A5C] animate-spin mr-2" />
+                      )}
+                      <button
+                        type="submit"
+                        className="p-1 hover:bg-slate-50 rounded-lg transition-colors text-[#0F7A5C]"
+                        title="Search"
+                      >
+                        <Search className="w-5 h-5" />
+                      </button>
+                    </div>
+                  </form>
+
+                  {/* Suggestions Dropdown */}
+                  <AnimatePresence>
+                    {showSuggestions && suggestions.length > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden z-[1000]"
+                      >
+                        <div className="max-h-[300px] overflow-y-auto">
+                          {suggestions.map((suggestion) => (
+                            <button
+                              key={suggestion.id}
+                              onClick={() => handleSuggestionSelect(suggestion)}
+                              className="w-full flex items-start gap-3 p-4 hover:bg-slate-50 transition-colors text-left border-b border-slate-50 last:border-0"
+                            >
+                              <div className={`mt-0.5 p-2 rounded-xl shrink-0 flex items-center justify-center ${suggestion.type === 'place' ? 'bg-blue-50 text-blue-500' : 'bg-emerald-50 text-emerald-600'}`}>
+                                {suggestion.type === 'place' ? <MapPin className="w-4 h-4" /> : <span className="text-sm">🕌</span>}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-sm font-bold text-slate-800 truncate">{suggestion.label}</p>
+                                {suggestion.subLabel && (
+                                  <p className="text-[10px] text-slate-500 truncate mt-0.5 font-medium">{suggestion.subLabel}</p>
+                                )}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              ) : (
               <motion.div
                 key="title"
                 initial={{ opacity: 0, y: -20 }}
