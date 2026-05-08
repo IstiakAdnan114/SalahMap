@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Settings, Ruler, Info } from 'lucide-react';
+import { X, Settings, Ruler, Info, MessageSquare } from 'lucide-react';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -96,6 +96,28 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, radius, 
                       <span className="text-[10px] font-bold text-slate-600">1.2.0</span>
                     </div>
                   </div>
+                </div>
+              </section>
+
+              {/* Feedback & Suggestions Section */}
+              <section className="pt-6 border-t border-slate-50">
+                <div className="flex items-center gap-2 mb-4">
+                  <MessageSquare className="w-4 h-4 text-[#0F7A5C]" />
+                  <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">Feedback & Suggestions</h3>
+                </div>
+                <div className="bg-emerald-50/50 rounded-2xl p-5 border border-emerald-100/50">
+                  <p className="text-xs text-slate-700 leading-relaxed font-medium mb-4">
+                    Found an issue or have a suggestion? Let us know! Your feedback helps us improve Mosque Finder for everyone.
+                  </p>
+                  <a 
+                    href="https://forms.gle/VN2wvyEFY5PHnwNf6" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 w-full bg-[#0F7A5C] text-white py-3 rounded-xl font-bold text-sm shadow-lg shadow-[#0F7A5C]/20 hover:bg-[#0D6B50] transition-all active:scale-95"
+                  >
+                    <MessageSquare className="w-4 h-4" />
+                    Send Feedback
+                  </a>
                 </div>
               </section>
             </div>
