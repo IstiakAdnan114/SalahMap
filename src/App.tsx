@@ -745,14 +745,14 @@ export default function App() {
                           <AnimatePresence>
                 {!isAnyModalOpen && (
                   <>
-                    <div className="absolute bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-4 z-[900] flex flex-col items-end gap-2 pointer-events-none">
+                    <div className="absolute bottom-[calc(3rem+env(safe-area-inset-bottom))] right-4 z-[900] flex flex-col items-end gap-2 pointer-events-none">
                       {/* Vertical Stack */}
                       <div className="flex flex-col gap-2 items-end">
                         <motion.button
                           whileTap={{ scale: 0.95 }}
                           onClick={handleRecenter}
                           disabled={isLocating}
-                          className="pointer-events-auto flex items-center gap-2 bg-white px-3 py-2 rounded-xl shadow-lg border border-slate-100 transition-colors hover:bg-slate-50"
+                          className="pointer-events-auto flex items-center gap-2 bg-[#fdfdfd] px-3 py-2 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.3)] border border-black/10 transition-colors hover:bg-slate-50"
                         >
                           <span className="text-[10px] font-bold uppercase tracking-wider text-[#0F7A5C]">Locate</span>
                           <Crosshair className={`w-4 h-4 text-[#0F7A5C] ${isLocating ? 'animate-spin' : ''}`} />
@@ -762,7 +762,7 @@ export default function App() {
                           whileTap={{ scale: 0.95 }}
                           onClick={() => fetchMosques(mapCenter[0], mapCenter[1], searchRadius, true)}
                           disabled={isSyncing}
-                          className="pointer-events-auto flex items-center gap-2 bg-white px-3 py-2 rounded-xl shadow-lg border border-slate-100 transition-colors hover:bg-slate-50"
+                          className="pointer-events-auto flex items-center gap-2 bg-[#fdfdfd] px-3 py-2 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.3)] border border-black/10 transition-colors hover:bg-slate-50"
                         >
                           <span className="text-[10px] font-bold uppercase tracking-wider text-[#0F7A5C]">Refresh</span>
                           <RefreshCw className={`w-4 h-4 text-[#0F7A5C] ${isSyncing ? 'animate-spin' : ''}`} />
@@ -771,7 +771,7 @@ export default function App() {
                         <motion.button
                           whileTap={{ scale: 0.95 }}
                           onClick={() => setIsAddModalOpen(true)}
-                          className="pointer-events-auto flex items-center gap-2 bg-white px-3 py-2 rounded-xl shadow-lg border border-slate-100 transition-colors hover:bg-slate-50"
+                          className="pointer-events-auto flex items-center gap-2 bg-[#fdfdfd] px-3 py-2 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.3)] border border-black/10 transition-colors hover:bg-slate-50"
                         >
                           <span className="text-[10px] font-bold uppercase tracking-wider text-[#0F7A5C]">Add</span>
                           <MapPinPlus className="w-4 h-4 text-[#0F7A5C]" />
@@ -783,8 +783,8 @@ export default function App() {
                         <motion.button
                           whileTap={{ scale: 0.95 }}
                           onClick={handleToggleMosques}
-                          className={`flex items-center gap-2 px-3 py-2 rounded-full shadow-lg border border-slate-100 transition-all font-bold text-[10px] uppercase tracking-wider ${
-                            mosquesVisible ? 'bg-white text-[#0F7A5C]' : 'bg-slate-100 text-slate-400'
+                          className={`flex items-center gap-2 px-3 py-2 rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.3)] border border-black/10 transition-all font-bold text-[10px] uppercase tracking-wider ${
+                            mosquesVisible ? 'bg-[#fdfdfd] text-[#0F7A5C]' : 'bg-slate-200 text-slate-500'
                           }`}
                         >
                           {mosquesVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
@@ -794,8 +794,8 @@ export default function App() {
                         <motion.button
                           whileTap={{ scale: 0.95 }}
                           onClick={() => setShowLabels(!showLabels)}
-                          className={`flex items-center gap-2 px-3 py-2 rounded-full shadow-lg border border-slate-100 transition-all font-bold text-[10px] uppercase tracking-wider ${
-                            showLabels ? 'bg-white text-[#0F7A5C]' : 'bg-slate-100 text-slate-400'
+                          className={`flex items-center gap-2 px-3 py-2 rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.3)] border border-black/10 transition-all font-bold text-[10px] uppercase tracking-wider ${
+                            showLabels ? 'bg-[#fdfdfd] text-[#0F7A5C]' : 'bg-slate-200 text-slate-500'
                           }`}
                         >
                           <Tag className="w-4 h-4" />
