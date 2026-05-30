@@ -6,7 +6,7 @@ import { mosqueService } from './services/mosqueService';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 import Fuse from 'fuse.js';
 import { Search, Navigation, Plus, Eye, EyeOff, MapPin, MapPinned, RefreshCw, Cloud, CloudOff, Clock, Tag, Crosshair, MapPinPlus } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'motion/react';
 import MosquePopup from './components/MosquePopup';
 import MosqueList from './components/MosqueList';
 import SavedView from './components/SavedView';
@@ -49,6 +49,41 @@ export default function App() {
   const [selectedMosque, setSelectedMosque] = useState<ActiveMosque | null>(null);
   const [sheetState, setSheetState] = useState<'collapsed' | 'half' | 'full'>('collapsed');
   const [sheetTab, setSheetTab] = useState<'nearby' | 'saved'>('nearby');
+
+  const [sheetHeight, setSheetHeight] = useState(typeof window !== 'undefined' ? window.innerHeight - 110 : 600);
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setSheetHeight(window.innerHeight - 110);
+      const handleResize = () => {
+        setSheetHeight(window.innerHeight - 110);
+      };
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
+    }
+  }, []);
+
+  const collapsedY = sheetHeight - 88;
+  const halfY = sheetHeight - 350;
+  const fullY = 0;
+
+  const y = useMotionValue(collapsedY);
+
+  const snapTo = (targetState: 'collapsed' | 'half' | 'full') => {
+    setSheetState(targetState);
+    const targetY = targetState === 'collapsed' ? collapsedY : targetState === 'half' ? halfY : fullY;
+    animate(y, targetY, {
+      type: "spring",
+      stiffness: 300,
+      damping: 30
+    });
+  };
+
+  // Sync motion value with height calculations on load or container changes
+  useEffect(() => {
+    const targetY = sheetState === 'collapsed' ? collapsedY : sheetState === 'half' ? halfY : fullY;
+    y.set(targetY);
+  }, [sheetHeight, collapsedY, halfY, fullY]);
 
   // Real-time Supabase Listener for Global Mosque Updates
   useEffect(() => {
@@ -665,7 +700,14 @@ export default function App() {
       </AnimatePresence>
 
       {/* Main Content Area */}
-      <div className={`flex-1 relative ${isAddModalOpen ? 'z-[550]' : 'z-0'} overflow-hidden`}>
+      <div 
+        onClick={() => {
+          if (sheetState === 'half') {
+            snapTo('collapsed');
+          }
+        }}
+        className={`flex-1 relative ${isAddModalOpen ? 'z-[550]' : 'z-0'} overflow-hidden`}
+      >
         <Map 
           center={mapCenter} 
           userLocation={userLocation}
@@ -762,34 +804,32 @@ export default function App() {
         {/* Unified Draggable Bottom Sheet */}
         <motion.div
           drag="y"
-          dragConstraints={{ top: 0, bottom: 0 }}
-          dragElastic={0.1}
-          dragMomentum={false}
-          variants={{
-            collapsed: { y: "calc(100% - 88px)" },
-            half: { y: "calc(100% - 350px)" },
-            full: { y: "0px" }
-          }}
-          animate={sheetState}
-          initial="collapsed"
+          dragConstraints={{ top: 0, bottom: collapsedY }}
+          dragElastic={0.15}
+          style={{ y }}
           onDragEnd={(_event, info) => {
-            const yOffset = info.offset.y;
+            const currentY = y.get();
             const velocity = info.velocity.y;
-            if (velocity < -100) {
-              if (sheetState === 'collapsed') setSheetState('half');
-              else if (sheetState === 'half') setSheetState('full');
-            } else if (velocity > 100) {
-              if (sheetState === 'full') setSheetState('half');
-              else if (sheetState === 'half') setSheetState('collapsed');
-            } else {
-              if (yOffset < -80) {
-                if (sheetState === 'collapsed') setSheetState('half');
-                else if (sheetState === 'half') setSheetState('full');
-              } else if (yOffset > 80) {
-                if (sheetState === 'full') setSheetState('half');
-                else if (sheetState === 'half') setSheetState('collapsed');
+            const projectedY = currentY + velocity * 0.15;
+
+            const targets = [
+              { state: 'full' as const, y: fullY },
+              { state: 'half' as const, y: halfY },
+              { state: 'collapsed' as const, y: collapsedY }
+            ];
+
+            let closest = targets[0];
+            let minDistance = Math.abs(projectedY - targets[0].y);
+
+            for (let i = 1; i < targets.length; i++) {
+              const dist = Math.abs(projectedY - targets[i].y);
+              if (dist < minDistance) {
+                minDistance = dist;
+                closest = targets[i];
               }
             }
+
+            snapTo(closest.state);
           }}
           className="fixed left-0 right-0 bottom-0 top-[110px] z-[800] bg-white rounded-t-[32px] shadow-[0_-10px_35px_rgba(0,0,0,0.15)] border border-slate-200 flex flex-col pointer-events-none"
         >
@@ -812,13 +852,18 @@ export default function App() {
             {/* Handle Drag Bar */}
             <div 
               onClick={() => {
-                if (sheetState === 'collapsed') setSheetState('half');
-                else if (sheetState === 'half') setSheetState('full');
-                else setSheetState('collapsed');
+                if (sheetState === 'collapsed') snapTo('half');
+                else if (sheetState === 'half') snapTo('full');
+                else snapTo('collapsed');
               }}
               className="w-full py-3 flex justify-center cursor-pointer select-none"
             >
-              <div className="w-12 h-1.5 rounded-full bg-slate-200 hover:bg-slate-300 transition-colors" />
+              <motion.div 
+                whileHover={{ scale: 1.15, backgroundColor: "#94a3b8" }}
+                whileTap={{ scale: 0.9, backgroundColor: "#64748b" }}
+                className="w-12 h-1.5 rounded-full bg-slate-300 transition-colors"
+                transition={{ type: "spring", stiffness: 400, damping: 25 }}
+              />
             </div>
 
             {/* Tab Controls */}
@@ -826,7 +871,7 @@ export default function App() {
               <button
                 onClick={() => {
                   setSheetTab('nearby');
-                  if (sheetState === 'collapsed') setSheetState('half');
+                  if (sheetState === 'collapsed') snapTo('half');
                 }}
                 className={`flex-1 py-1.5 text-center font-bold text-xs uppercase tracking-wider border-b-2 transition-all ${
                   sheetTab === 'nearby' 
@@ -839,7 +884,7 @@ export default function App() {
               <button
                 onClick={() => {
                   setSheetTab('saved');
-                  if (sheetState === 'collapsed') setSheetState('half');
+                  if (sheetState === 'collapsed') snapTo('half');
                 }}
                 className={`flex-1 py-1.5 text-center font-bold text-xs uppercase tracking-wider border-b-2 transition-all ${
                   sheetTab === 'saved' 
@@ -860,22 +905,24 @@ export default function App() {
                 mapCenter={mapCenter} 
                 searchRadius={searchRadius}
                 isBottomSheet={true}
-                onBack={() => setSheetState('collapsed')}
+                sheetState={sheetState}
+                onBack={() => snapTo('collapsed')}
                 onSelect={(m) => {
                   setMapCenter([m.latitude, m.longitude]);
                   setForceRecenter(prev => prev + 1);
                   setSelectedMosque(m);
-                  setSheetState('collapsed');
+                  snapTo('collapsed');
                 }} 
               />
             ) : (
               <SavedView 
                 isBottomSheet={true}
+                sheetState={sheetState}
                 onSelectMosque={(m) => {
                   setMapCenter([m.latitude, m.longitude]);
                   setForceRecenter(prev => prev + 1);
                   setSelectedMosque(m);
-                  setSheetState('collapsed');
+                  snapTo('collapsed');
                 }} 
               />
             )}

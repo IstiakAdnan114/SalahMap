@@ -11,9 +11,18 @@ interface MosqueListProps {
   onSelect: (mosque: Mosque) => void;
   onBack: () => void;
   isBottomSheet?: boolean;
+  sheetState?: 'collapsed' | 'half' | 'full';
 }
 
-const MosqueList: React.FC<MosqueListProps> = ({ mosques, mapCenter, searchRadius, onSelect, onBack, isBottomSheet = false }) => {
+const MosqueList: React.FC<MosqueListProps> = ({ 
+  mosques, 
+  mapCenter, 
+  searchRadius, 
+  onSelect, 
+  onBack, 
+  isBottomSheet = false,
+  sheetState = 'collapsed'
+}) => {
   const [prayerTimesMap, setPrayerTimesMap] = useState<Record<string, PrayerTimes>>({});
 
   useEffect(() => {
@@ -96,7 +105,15 @@ const MosqueList: React.FC<MosqueListProps> = ({ mosques, mapCenter, searchRadiu
     .sort((a, b) => (a.distance || 0) - (b.distance || 0));
 
   return (
-    <div className={`flex-1 overflow-y-auto bg-white flex flex-col h-full ${isBottomSheet ? 'pt-0' : 'pt-[calc(5rem+env(safe-area-inset-top))]'}`}>
+    <div 
+      className={`flex-1 bg-white flex flex-col h-full ${isBottomSheet ? 'pt-0' : 'pt-[calc(5rem+env(safe-area-inset-top))]'} ${
+        isBottomSheet && sheetState !== 'full' ? 'overflow-hidden' : 'overflow-y-auto'
+      }`}
+      style={{
+        WebkitOverflowScrolling: 'touch',
+        scrollBehavior: 'smooth'
+      }}
+    >
       {!isBottomSheet && (
         <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row gap-3 sm:items-center shrink-0 w-full overflow-hidden">
           <div className="flex-1 min-w-0">

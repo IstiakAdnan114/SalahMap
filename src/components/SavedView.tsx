@@ -7,9 +7,14 @@ import { motion } from 'motion/react';
 interface SavedViewProps {
   onSelectMosque: (mosque: Mosque) => void;
   isBottomSheet?: boolean;
+  sheetState?: 'collapsed' | 'half' | 'full';
 }
 
-const SavedView: React.FC<SavedViewProps> = ({ onSelectMosque, isBottomSheet = false }) => {
+const SavedView: React.FC<SavedViewProps> = ({ 
+  onSelectMosque, 
+  isBottomSheet = false,
+  sheetState = 'collapsed'
+}) => {
   const [savedMosques, setSavedMosques] = useState<Mosque[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -47,7 +52,15 @@ const SavedView: React.FC<SavedViewProps> = ({ onSelectMosque, isBottomSheet = f
   }
 
   return (
-    <div className={`flex-1 overflow-y-auto pb-12 ${isBottomSheet ? 'bg-white pt-2' : 'bg-slate-50 pt-[calc(5rem+env(safe-area-inset-top))]'}`}>
+    <div 
+      className={`flex-1 pb-12 ${isBottomSheet ? 'bg-white pt-2' : 'bg-slate-50 pt-[calc(5rem+env(safe-area-inset-top))]'} ${
+        isBottomSheet && sheetState !== 'full' ? 'overflow-hidden' : 'overflow-y-auto'
+      }`}
+      style={{
+        WebkitOverflowScrolling: 'touch',
+        scrollBehavior: 'smooth'
+      }}
+    >
       <div className={isBottomSheet ? 'p-3' : 'p-6'}>
         <div className="grid gap-4">
           {savedMosques.map((mosque) => (
