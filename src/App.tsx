@@ -47,6 +47,8 @@ export default function App() {
   const [showLabels, setShowLabels] = useState(true);
   const [mosquesVisible, setMosquesVisible] = useState(true);
   const [selectedMosque, setSelectedMosque] = useState<ActiveMosque | null>(null);
+  const [sheetState, setSheetState] = useState<'collapsed' | 'half' | 'full'>('collapsed');
+  const [sheetTab, setSheetTab] = useState<'nearby' | 'saved'>('nearby');
 
   // Real-time Supabase Listener for Global Mosque Updates
   useEffect(() => {
@@ -499,110 +501,83 @@ export default function App() {
 
   return (
     <div className="h-full w-full bg-[#F8F9FA] overflow-hidden flex flex-col font-sans">
-      {/* Header / Search Bar or Page Title */}
-      <div className={`fixed top-0 left-0 right-0 z-[700] transition-all duration-300 ${
-        activeTab === 'map' 
-          ? 'p-4 pt-[calc(1rem+env(safe-area-inset-top))] pointer-events-none' 
-          : `pb-4 px-4 pt-[calc(1rem+env(safe-area-inset-top))] pointer-events-none border-b border-slate-200 shadow-sm ${
-              activeTab === 'list' ? 'bg-white' : 'bg-slate-50'
-            }`
-      }`}>
-          <div ref={searchContainerRef} className="max-w-md mx-auto pointer-events-auto relative">
-            <AnimatePresence mode="wait">
-              {activeTab === 'map' ? (
-                <motion.div 
-                  key="search-container"
-                  className="flex flex-col gap-2"
-                >
-                  <form 
-                    key="search"
-                    onSubmit={handleSearch} 
-                    className="flex gap-2"
-                  >
-                    <div className="flex-1 bg-white rounded-2xl shadow-xl flex items-center px-4 py-3 border border-slate-100 relative">
-                      <Search className="w-5 h-5 text-slate-400 mr-3" />
-                      <input 
-                        type="text" 
-                        value={searchQuery}
-                        onChange={(e) => handleSearchChange(e.target.value)}
-                        onFocus={() => searchQuery && setShowSuggestions(true)}
-                        placeholder="Search city, area or mosque..." 
-                        className="bg-transparent border-none outline-none text-slate-800 w-full font-medium"
-                      />
-                      {isSearchingSuggestions && (
-                        <RefreshCw className="w-4 h-4 text-[#0F7A5C] animate-spin mr-2" />
-                      )}
-                      <button
-                        type="submit"
-                        className="p-1 hover:bg-slate-50 rounded-lg transition-colors text-[#0F7A5C]"
-                        title="Search"
-                      >
-                        <Search className="w-5 h-5" />
-                      </button>
-                    </div>
-                  </form>
-
-                  {/* Suggestions Dropdown */}
-                  <AnimatePresence>
-                    {showSuggestions && suggestions.length > 0 && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden z-[1000]"
-                      >
-                        <div className="max-h-[300px] overflow-y-auto">
-                          {suggestions.map((suggestion) => (
-                            <button
-                              key={suggestion.id}
-                              onClick={() => handleSuggestionSelect(suggestion)}
-                              className="w-full flex items-start gap-3 p-4 hover:bg-slate-50 transition-colors text-left border-b border-slate-50 last:border-0"
-                            >
-                              <div className={`mt-0.5 p-2 rounded-xl shrink-0 flex items-center justify-center ${suggestion.type === 'place' ? 'bg-blue-50 text-blue-500' : 'bg-emerald-50 text-emerald-600'}`}>
-                                {suggestion.type === 'place' ? <MapPin className="w-4 h-4" /> : <span className="text-sm">🕌</span>}
-                              </div>
-                              <div className="min-w-0">
-                                <p className="text-sm font-bold text-slate-800 truncate">{suggestion.label}</p>
-                                {suggestion.subLabel && (
-                                  <p className="text-[10px] text-slate-500 truncate mt-0.5 font-medium">{suggestion.subLabel}</p>
-                                )}
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </motion.div>
-              ) : (
-              <motion.div
-                key="title"
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="bg-[#0F7A5C] rounded-2xl shadow-xl py-3 px-6 flex items-center justify-between border-2 border-white/20"
+      {/* Header / Search Bar and Settings Icon */}
+      <div className="fixed top-0 left-0 right-0 z-[700] p-4 pt-[calc(1rem+env(safe-area-inset-top))] pointer-events-none">
+        <div className="max-w-md mx-auto flex gap-2 items-center">
+          <div ref={searchContainerRef} className="flex-1 min-w-0 pointer-events-auto relative">
+            <motion.div 
+              key="search-container"
+              className="flex flex-col gap-2"
+            >
+              <form 
+                key="search"
+                onSubmit={handleSearch} 
+                className="flex gap-2"
               >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center text-white">
-                    {activeTab === 'list' ? <List className="w-5 h-5" /> : <Bookmark className="w-5 h-5 fill-current" />}
-                  </div>
-                  <h1 className="text-white font-black text-lg tracking-tight">
-                    {activeTab === 'list' ? 'Nearest Mosques' : 'Saved Mosques'}
-                  </h1>
+                <div className="flex-1 bg-white rounded-2xl shadow-xl flex items-center px-4 py-3 border border-slate-100 relative">
+                  <Search className="w-5 h-5 text-slate-400 mr-3" />
+                  <input 
+                    type="text" 
+                    value={searchQuery}
+                    onChange={(e) => handleSearchChange(e.target.value)}
+                    onFocus={() => searchQuery && setShowSuggestions(true)}
+                    placeholder="Search city, area or mosque..." 
+                    className="bg-transparent border-none outline-none text-slate-800 w-full font-medium"
+                  />
+                  {isSearchingSuggestions && (
+                    <RefreshCw className="w-4 h-4 text-[#0F7A5C] animate-spin mr-2" />
+                  )}
+                  <button
+                    type="submit"
+                    className="p-1 hover:bg-slate-50 rounded-lg transition-colors text-[#0F7A5C]"
+                    title="Search"
+                  >
+                    <Search className="w-5 h-5" />
+                  </button>
                 </div>
-                {activeTab === 'list' && mosques.length > 0 && (
-                  <span className="text-[10px] font-black text-white/60 bg-white/10 px-2 py-1 rounded-lg uppercase tracking-widest">
-                    {mosques.length} Found
-                  </span>
+              </form>
+
+              {/* Suggestions Dropdown */}
+              <AnimatePresence>
+                {showSuggestions && suggestions.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden z-[1000]"
+                  >
+                    <div className="max-h-[300px] overflow-y-auto">
+                      {suggestions.map((suggestion) => (
+                        <button
+                          key={suggestion.id}
+                          onClick={() => handleSuggestionSelect(suggestion)}
+                          className="w-full flex items-start gap-3 p-4 hover:bg-slate-50 transition-colors text-left border-b border-slate-50 last:border-0"
+                        >
+                          <div className={`mt-0.5 p-2 rounded-xl shrink-0 flex items-center justify-center ${suggestion.type === 'place' ? 'bg-blue-50 text-blue-500' : 'bg-emerald-50 text-emerald-600'}`}>
+                            {suggestion.type === 'place' ? <MapPin className="w-4 h-4" /> : <span className="text-sm">🕌</span>}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-bold text-slate-800 truncate">{suggestion.label}</p>
+                            {suggestion.subLabel && (
+                              <p className="text-[10px] text-slate-500 truncate mt-0.5 font-medium">{suggestion.subLabel}</p>
+                            )}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </motion.div>
                 )}
-                {activeTab === 'saved' && (
-                  <div className="text-[10px] font-black text-white/60 uppercase tracking-widest">
-                    Collection
-                  </div>
-                )}
-              </motion.div>
-            )}
-          </AnimatePresence>
+              </AnimatePresence>
+            </motion.div>
+          </div>
+
+          <button
+            onClick={() => setIsSettingsModalOpen(true)}
+            className="w-12 h-12 rounded-2xl bg-white border border-slate-100 shadow-xl flex items-center justify-center text-slate-600 hover:text-[#0F7A5C] transition-colors pointer-events-auto shrink-0"
+            title="Settings"
+          >
+            <Settings className="w-5 h-5" />
+          </button>
         </div>
       </div>
 
@@ -691,201 +666,221 @@ export default function App() {
 
       {/* Main Content Area */}
       <div className={`flex-1 relative ${isAddModalOpen ? 'z-[550]' : 'z-0'} overflow-hidden`}>
-        <AnimatePresence mode="wait" initial={false}>
-          {activeTab === 'map' ? (
-            <motion.div
-              key="map"
-              initial={{ x: -20, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: -20, opacity: 0 }}
-              transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="absolute inset-0 flex flex-col"
-            >
-              <Map 
-                center={mapCenter} 
-                userLocation={userLocation}
-                mosques={mosquesVisible ? mosques : []} 
-                showLabels={showLabels}
-                onMosqueSelect={(m) => setSelectedMosque(m)} 
-                onCenterChange={(newCenter) => setMapCenter(newCenter)}
-                onDeleteMosque={handleDeleteMosque}
-                forceRecenter={forceRecenter}
-                isAdding={isAddModalOpen}
-              />
+        <Map 
+          center={mapCenter} 
+          userLocation={userLocation}
+          mosques={mosquesVisible ? mosques : []} 
+          showLabels={showLabels}
+          onMosqueSelect={(m) => setSelectedMosque(m)} 
+          onCenterChange={(newCenter) => setMapCenter(newCenter)}
+          onDeleteMosque={handleDeleteMosque}
+          forceRecenter={forceRecenter}
+          isAdding={isAddModalOpen}
+        />
 
-              {/* Map Target Indicator (Vibrant) */}
-              {!selectedMosque && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[800]">
-                  <div className="relative w-12 h-12 flex items-center justify-center">
-                    {/* Pulsing Ring */}
-                    <div className={`absolute w-full h-full rounded-full border-2 animate-pulse transition-colors ${isAddModalOpen ? 'border-amber-400/40' : 'border-emerald-400/40'}`}></div>
-                    
-                    {/* Crosshair Lines */}
-                    <div className={`absolute w-full h-[2px] transition-colors ${isAddModalOpen ? 'bg-amber-500' : 'bg-emerald-500'}`}></div>
-                    <div className={`absolute h-full w-[2px] transition-colors ${isAddModalOpen ? 'bg-amber-500' : 'bg-emerald-500'}`}></div>
-                    
-                    {/* Center Dot */}
-                    <div className={`w-3 h-3 rounded-full border-2 border-white shadow-lg transition-colors ${isAddModalOpen ? 'bg-amber-500' : 'bg-emerald-500'}`}></div>
+        {/* Map Target Indicator (Vibrant) */}
+        {!selectedMosque && (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[100]">
+            <div className="relative w-12 h-12 flex items-center justify-center">
+              {/* Pulsing Ring */}
+              <div className={`absolute w-full h-full rounded-full border-2 animate-pulse transition-colors ${isAddModalOpen ? 'border-amber-400/40' : 'border-emerald-400/40'}`}></div>
+              
+              {/* Crosshair Lines */}
+              <div className={`absolute w-full h-[2px] transition-colors ${isAddModalOpen ? 'bg-amber-500' : 'bg-emerald-500'}`}></div>
+              <div className={`absolute h-full w-[2px] transition-colors ${isAddModalOpen ? 'bg-amber-500' : 'bg-emerald-500'}`}></div>
+              
+              {/* Center Dot */}
+              <div className={`w-3 h-3 rounded-full border-2 border-white shadow-lg transition-colors ${isAddModalOpen ? 'bg-amber-500' : 'bg-emerald-500'}`}></div>
 
-                    <AnimatePresence>
-                      {isAddModalOpen && (
-                        <motion.div 
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: 10 }}
-                          className="absolute bottom-16 bg-amber-500 text-white text-[10px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest whitespace-nowrap shadow-xl border-2 border-white"
-                        >
-                          Pin Mosque Here
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                </div>
-              )}
-                          <AnimatePresence>
-                {!isAnyModalOpen && (
-                  <>
-                    <div className="absolute bottom-[calc(3rem+env(safe-area-inset-bottom))] right-4 z-[900] flex flex-col items-end gap-2 pointer-events-none">
-                      {/* Vertical Stack */}
-                      <div className="flex flex-col gap-2 items-end">
-                        <motion.button
-                          whileTap={{ scale: 0.95 }}
-                          onClick={handleRecenter}
-                          disabled={isLocating}
-                          className="pointer-events-auto flex items-center gap-2 bg-[#fdfdfd] px-3 py-2 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.3)] border border-black/10 transition-colors hover:bg-slate-50"
-                        >
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-[#0F7A5C]">Locate</span>
-                          <Crosshair className={`w-4 h-4 text-[#0F7A5C] ${isLocating ? 'animate-spin' : ''}`} />
-                        </motion.button>
-
-                        <motion.button
-                          whileTap={{ scale: 0.95 }}
-                          onClick={() => fetchMosques(mapCenter[0], mapCenter[1], searchRadius, true)}
-                          disabled={isSyncing}
-                          className="pointer-events-auto flex items-center gap-2 bg-[#fdfdfd] px-3 py-2 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.3)] border border-black/10 transition-colors hover:bg-slate-50"
-                        >
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-[#0F7A5C]">Refresh</span>
-                          <RefreshCw className={`w-4 h-4 text-[#0F7A5C] ${isSyncing ? 'animate-spin' : ''}`} />
-                        </motion.button>
-
-                        <motion.button
-                          whileTap={{ scale: 0.95 }}
-                          onClick={() => setIsAddModalOpen(true)}
-                          className="pointer-events-auto flex items-center gap-2 bg-[#fdfdfd] px-3 py-2 rounded-xl shadow-[0_2px_8px_rgba(0,0,0,0.3)] border border-black/10 transition-colors hover:bg-slate-50"
-                        >
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-[#0F7A5C]">Add</span>
-                          <MapPinPlus className="w-4 h-4 text-[#0F7A5C]" />
-                        </motion.button>
-                      </div>
-
-                      {/* Horizontal Toggles */}
-                      <div className="flex gap-2 pointer-events-auto mt-1">
-                        <motion.button
-                          whileTap={{ scale: 0.95 }}
-                          onClick={handleToggleMosques}
-                          className={`flex items-center gap-2 px-3 py-2 rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.3)] border border-black/10 transition-all font-bold text-[10px] uppercase tracking-wider ${
-                            mosquesVisible ? 'bg-[#fdfdfd] text-[#0F7A5C]' : 'bg-slate-200 text-slate-500'
-                          }`}
-                        >
-                          {mosquesVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                          Mosques
-                        </motion.button>
-
-                        <motion.button
-                          whileTap={{ scale: 0.95 }}
-                          onClick={() => setShowLabels(!showLabels)}
-                          className={`flex items-center gap-2 px-3 py-2 rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.3)] border border-black/10 transition-all font-bold text-[10px] uppercase tracking-wider ${
-                            showLabels ? 'bg-[#fdfdfd] text-[#0F7A5C]' : 'bg-slate-200 text-slate-500'
-                          }`}
-                        >
-                          <Tag className="w-4 h-4" />
-                          Labels
-                        </motion.button>
-                      </div>
-                    </div>
-                  </>
+              <AnimatePresence>
+                {isAddModalOpen && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="absolute bottom-16 bg-amber-500 text-white text-[10px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest whitespace-nowrap shadow-xl border-2 border-white"
+                  >
+                    Pin Mosque Here
+                  </motion.div>
                 )}
               </AnimatePresence>
-            </motion.div>
-          ) : activeTab === 'list' ? (
-            <motion.div
-              key="list"
-              initial={{ x: 20, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: 20, opacity: 0 }}
-              transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="absolute inset-0 flex flex-col"
+            </div>
+          </div>
+        )}
+
+        {/* Map Controls: Eye/EyeOff and Tag (Mosques/Labels toggles) — top right corner below top bar */}
+        {!isAnyModalOpen && (
+          <div className="absolute top-[calc(5rem+env(safe-area-inset-top))] right-4 z-[400] flex flex-col gap-2 pointer-events-auto">
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={handleToggleMosques}
+              className={`flex items-center justify-center w-10 h-10 rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.3)] border border-black/10 transition-all ${
+                mosquesVisible ? 'bg-[#fdfdfd] text-[#0F7A5C]' : 'bg-slate-200 text-slate-500'
+              }`}
+              title="Toggle Mosques"
             >
+              {mosquesVisible ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
+            </motion.button>
+
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setShowLabels(!showLabels)}
+              className={`flex items-center justify-center w-10 h-10 rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.3)] border border-black/10 transition-all ${
+                showLabels ? 'bg-[#fdfdfd] text-[#0F7A5C]' : 'bg-slate-200 text-slate-500'
+              }`}
+              title="Toggle Labels"
+            >
+              <Tag className="w-5 h-5" />
+            </motion.button>
+          </div>
+        )}
+
+        {/* Map Controls: RefreshCw and MapPinPlus (Refresh/Add) — bottom right corner, covered when sheet is fully up */}
+        {!isAnyModalOpen && (
+          <div className="absolute bottom-[105px] right-4 z-[300] flex flex-col gap-2 pointer-events-auto">
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => fetchMosques(mapCenter[0], mapCenter[1], searchRadius, true)}
+              disabled={isSyncing}
+              className="flex items-center justify-center w-10 h-10 bg-[#fdfdfd] text-[#0F7A5C] rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.3)] border border-black/10 transition-all hover:bg-slate-50"
+              title="Refresh Data"
+            >
+              <RefreshCw className={`w-5 h-5 ${isSyncing ? 'animate-spin' : ''}`} />
+            </motion.button>
+
+            <motion.button
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setIsAddModalOpen(true)}
+              className="flex items-center justify-center w-10 h-10 bg-[#fdfdfd] text-[#0F7A5C] rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.3)] border border-black/10 transition-all hover:bg-slate-50"
+              title="Add Mosque"
+            >
+              <MapPinPlus className="w-5 h-5" />
+            </motion.button>
+          </div>
+        )}
+
+        {/* Unified Draggable Bottom Sheet */}
+        <motion.div
+          drag="y"
+          dragConstraints={{ top: 0, bottom: 0 }}
+          dragElastic={0.1}
+          dragMomentum={false}
+          variants={{
+            collapsed: { y: "calc(100% - 88px)" },
+            half: { y: "calc(100% - 350px)" },
+            full: { y: "0px" }
+          }}
+          animate={sheetState}
+          initial="collapsed"
+          onDragEnd={(_event, info) => {
+            const yOffset = info.offset.y;
+            const velocity = info.velocity.y;
+            if (velocity < -100) {
+              if (sheetState === 'collapsed') setSheetState('half');
+              else if (sheetState === 'half') setSheetState('full');
+            } else if (velocity > 100) {
+              if (sheetState === 'full') setSheetState('half');
+              else if (sheetState === 'half') setSheetState('collapsed');
+            } else {
+              if (yOffset < -80) {
+                if (sheetState === 'collapsed') setSheetState('half');
+                else if (sheetState === 'half') setSheetState('full');
+              } else if (yOffset > 80) {
+                if (sheetState === 'full') setSheetState('half');
+                else if (sheetState === 'half') setSheetState('collapsed');
+              }
+            }
+          }}
+          className="fixed left-0 right-0 bottom-0 top-[110px] z-[800] bg-white rounded-t-[32px] shadow-[0_-10px_35px_rgba(0,0,0,0.15)] border border-slate-200 flex flex-col pointer-events-none"
+        >
+          {/* Header area (Handle bar and Tab headers) */}
+          <div className="flex flex-col shrink-0 bg-white rounded-t-[32px] border-b border-slate-100 z-10 pointer-events-auto relative">
+            
+            {/* Locate Me Button floating center-top of the bottom sheet */}
+            <div className="absolute -top-16 left-1/2 -translate-x-1/2 z-[850] pointer-events-auto">
+              <motion.button
+                whileTap={{ scale: 0.92 }}
+                onClick={handleRecenter}
+                disabled={isLocating}
+                className="flex items-center justify-center w-14 h-14 rounded-full bg-[#0F7A5C] text-white shadow-[0_4px_14px_rgba(15,122,92,0.4)] border-4 border-white transition-all transform hover:scale-105"
+                title="Locate Me"
+              >
+                <Crosshair className={`w-6 h-6 ${isLocating ? 'animate-spin' : ''}`} />
+              </motion.button>
+            </div>
+
+            {/* Handle Drag Bar */}
+            <div 
+              onClick={() => {
+                if (sheetState === 'collapsed') setSheetState('half');
+                else if (sheetState === 'half') setSheetState('full');
+                else setSheetState('collapsed');
+              }}
+              className="w-full py-3 flex justify-center cursor-pointer select-none"
+            >
+              <div className="w-12 h-1.5 rounded-full bg-slate-200 hover:bg-slate-300 transition-colors" />
+            </div>
+
+            {/* Tab Controls */}
+            <div className="px-6 pb-2 flex gap-4">
+              <button
+                onClick={() => {
+                  setSheetTab('nearby');
+                  if (sheetState === 'collapsed') setSheetState('half');
+                }}
+                className={`flex-1 py-1.5 text-center font-bold text-xs uppercase tracking-wider border-b-2 transition-all ${
+                  sheetTab === 'nearby' 
+                    ? 'text-[#0F7A5C] border-[#0F7A5C]' 
+                    : 'text-slate-400 border-transparent hover:text-slate-600'
+                }`}
+              >
+                Nearby
+              </button>
+              <button
+                onClick={() => {
+                  setSheetTab('saved');
+                  if (sheetState === 'collapsed') setSheetState('half');
+                }}
+                className={`flex-1 py-1.5 text-center font-bold text-xs uppercase tracking-wider border-b-2 transition-all ${
+                  sheetTab === 'saved' 
+                    ? 'text-[#0F7A5C] border-[#0F7A5C]' 
+                    : 'text-slate-400 border-transparent hover:text-slate-600'
+                }`}
+              >
+                Saved
+              </button>
+            </div>
+          </div>
+
+          {/* Bottom Sheet Body */}
+          <div className="flex-1 min-h-0 bg-white pointer-events-auto overflow-hidden flex flex-col">
+            {sheetTab === 'nearby' ? (
               <MosqueList 
                 mosques={mosques} 
                 mapCenter={mapCenter} 
                 searchRadius={searchRadius}
-                onBack={() => setActiveTab('map')}
+                isBottomSheet={true}
+                onBack={() => setSheetState('collapsed')}
                 onSelect={(m) => {
                   setMapCenter([m.latitude, m.longitude]);
                   setForceRecenter(prev => prev + 1);
-                  setActiveTab('map');
+                  setSelectedMosque(m);
+                  setSheetState('collapsed');
                 }} 
               />
-            </motion.div>
-          ) : (
-            <motion.div
-              key="saved"
-              initial={{ x: 20, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: 20, opacity: 0 }}
-              transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="absolute inset-0 flex flex-col"
-            >
-              <SavedView onSelectMosque={(m) => {
-                setMapCenter([m.latitude, m.longitude]);
-                setForceRecenter(prev => prev + 1);
-                setActiveTab('map');
-                setSelectedMosque(m);
-              }} />
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* Bottom Navigation (Mobile) */}
-      <div className="bg-white border-t border-slate-100 px-6 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] flex justify-between items-center z-[700] shrink-0">
-        <button 
-          onClick={() => setActiveTab('map')}
-          className={`flex flex-col items-center gap-0.5 transition-colors ${activeTab === 'map' ? 'text-[#0F7A5C]' : 'text-slate-400'}`}
-        >
-          <div className={`w-1.5 h-1.5 rounded-full transition-all ${activeTab === 'map' ? 'bg-[#0F7A5C] scale-100' : 'bg-transparent scale-0'}`}></div>
-          <MapIcon className="w-5 h-5 mb-0.5" />
-          <span className="text-[10px] font-bold uppercase tracking-widest leading-none">Map</span>
-          <span className={`text-[8px] font-medium transition-colors ${activeTab === 'map' ? 'text-[#0F7A5C]/70' : 'text-slate-300'}`}>Find mosques</span>
-        </button>
-        <button 
-          onClick={() => setActiveTab('list')}
-          className={`flex flex-col items-center gap-0.5 transition-colors ${activeTab === 'list' ? 'text-[#0F7A5C]' : 'text-slate-400'}`}
-        >
-          <div className={`w-1.5 h-1.5 rounded-full transition-all ${activeTab === 'list' ? 'bg-[#0F7A5C] scale-100' : 'bg-transparent scale-0'}`}></div>
-          <List className="w-5 h-5 mb-0.5" />
-          <span className="text-[10px] font-bold uppercase tracking-widest leading-none">List</span>
-          <span className={`text-[8px] font-medium transition-colors ${activeTab === 'list' ? 'text-[#0F7A5C]/70' : 'text-slate-300'}`}>Distance & times</span>
-        </button>
-        <button 
-          onClick={() => setActiveTab('saved')}
-          className={`flex flex-col items-center gap-0.5 transition-colors ${activeTab === 'saved' ? 'text-[#0F7A5C]' : 'text-slate-400'}`}
-        >
-          <div className={`w-1.5 h-1.5 rounded-full transition-all ${activeTab === 'saved' ? 'bg-[#0F7A5C] scale-100' : 'bg-transparent scale-0'}`}></div>
-          <Bookmark className={`w-5 h-5 mb-0.5 ${activeTab === 'saved' ? 'fill-current' : ''}`} />
-          <span className="text-[10px] font-bold uppercase tracking-widest leading-none">Saved</span>
-          <span className={`text-[8px] font-medium transition-colors ${activeTab === 'saved' ? 'text-[#0F7A5C]/70' : 'text-slate-300'}`}>Your favourites</span>
-        </button>
-        <button 
-          onClick={() => setIsSettingsModalOpen(true)}
-          className={`flex flex-col items-center gap-0.5 transition-colors ${isSettingsModalOpen ? 'text-[#0F7A5C]' : 'text-slate-400'}`}
-        >
-          <div className={`w-1.5 h-1.5 rounded-full transition-all ${isSettingsModalOpen ? 'bg-[#0F7A5C] scale-100' : 'bg-transparent scale-0'}`}></div>
-          <Settings className="w-5 h-5 mb-0.5" />
-          <span className="text-[10px] font-bold uppercase tracking-widest leading-none">Settings</span>
-          <span className={`text-[8px] font-medium transition-colors ${isSettingsModalOpen ? 'text-[#0F7A5C]/70' : 'text-slate-300'}`}>Preferences</span>
-        </button>
+            ) : (
+              <SavedView 
+                isBottomSheet={true}
+                onSelectMosque={(m) => {
+                  setMapCenter([m.latitude, m.longitude]);
+                  setForceRecenter(prev => prev + 1);
+                  setSelectedMosque(m);
+                  setSheetState('collapsed');
+                }} 
+              />
+            )}
+          </div>
+        </motion.div>
       </div>
 
       <SettingsModal

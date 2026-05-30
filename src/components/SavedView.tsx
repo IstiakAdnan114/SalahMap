@@ -6,9 +6,10 @@ import { motion } from 'motion/react';
 
 interface SavedViewProps {
   onSelectMosque: (mosque: Mosque) => void;
+  isBottomSheet?: boolean;
 }
 
-const SavedView: React.FC<SavedViewProps> = ({ onSelectMosque }) => {
+const SavedView: React.FC<SavedViewProps> = ({ onSelectMosque, isBottomSheet = false }) => {
   const [savedMosques, setSavedMosques] = useState<Mosque[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -46,8 +47,8 @@ const SavedView: React.FC<SavedViewProps> = ({ onSelectMosque }) => {
   }
 
   return (
-    <div className="flex-1 bg-slate-50 overflow-y-auto pb-[calc(5rem+env(safe-area-inset-bottom))] pt-[calc(5rem+env(safe-area-inset-top))]">
-      <div className="p-6">
+    <div className={`flex-1 overflow-y-auto pb-12 ${isBottomSheet ? 'bg-white pt-2' : 'bg-slate-50 pt-[calc(5rem+env(safe-area-inset-top))]'}`}>
+      <div className={isBottomSheet ? 'p-3' : 'p-6'}>
         <div className="grid gap-4">
           {savedMosques.map((mosque) => (
             <motion.button

@@ -10,9 +10,10 @@ interface MosqueListProps {
   searchRadius: number;
   onSelect: (mosque: Mosque) => void;
   onBack: () => void;
+  isBottomSheet?: boolean;
 }
 
-const MosqueList: React.FC<MosqueListProps> = ({ mosques, mapCenter, searchRadius, onSelect, onBack }) => {
+const MosqueList: React.FC<MosqueListProps> = ({ mosques, mapCenter, searchRadius, onSelect, onBack, isBottomSheet = false }) => {
   const [prayerTimesMap, setPrayerTimesMap] = useState<Record<string, PrayerTimes>>({});
 
   useEffect(() => {
@@ -95,24 +96,34 @@ const MosqueList: React.FC<MosqueListProps> = ({ mosques, mapCenter, searchRadiu
     .sort((a, b) => (a.distance || 0) - (b.distance || 0));
 
   return (
-    <div className="flex-1 overflow-y-auto bg-white flex flex-col h-full pt-[calc(5rem+env(safe-area-inset-top))]">
-      <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row gap-3 sm:items-center shrink-0 w-full overflow-hidden">
-        <div className="flex-1 min-w-0">
-          <div className="bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-full flex items-center border border-emerald-100/50 shadow-sm transition-all hover:bg-emerald-100 w-fit max-w-full">
-            <span className="text-[10px] font-bold tracking-tight truncate">
-              📍 Showing <span className="font-black underline decoration-emerald-300 underline-offset-2">{sortedMosques.length}</span> mosques within <span className="font-black underline decoration-emerald-300 underline-offset-2">{searchRadius >= 1000 ? `${searchRadius / 1000}km` : `${searchRadius}m`}</span> · Sorted by distance
-            </span>
+    <div className={`flex-1 overflow-y-auto bg-white flex flex-col h-full ${isBottomSheet ? 'pt-0' : 'pt-[calc(5rem+env(safe-area-inset-top))]'}`}>
+      {!isBottomSheet && (
+        <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row gap-3 sm:items-center shrink-0 w-full overflow-hidden">
+          <div className="flex-1 min-w-0">
+            <div className="bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-full flex items-center border border-emerald-100/50 shadow-sm transition-all hover:bg-emerald-100 w-fit max-w-full">
+              <span className="text-[10px] font-bold tracking-tight truncate">
+                📍 Showing <span className="font-black underline decoration-emerald-300 underline-offset-2">{sortedMosques.length}</span> mosques within <span className="font-black underline decoration-emerald-300 underline-offset-2">{searchRadius >= 1000 ? `${searchRadius / 1000}km` : `${searchRadius}m`}</span> · Sorted by distance
+              </span>
+            </div>
           </div>
+          <button 
+            onClick={onBack}
+            className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[10px] font-bold text-[#0F7A5C] uppercase tracking-wider shadow-sm hover:bg-slate-50 transition-colors shrink-0 w-fit self-end sm:self-auto"
+          >
+            Back to Map
+          </button>
         </div>
-        <button 
-          onClick={onBack}
-          className="px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-[10px] font-bold text-[#0F7A5C] uppercase tracking-wider shadow-sm hover:bg-slate-50 transition-colors shrink-0 w-fit self-end sm:self-auto"
-        >
-          Back to Map
-        </button>
-      </div>
+      )}
 
-      <div className="divide-y divide-slate-50 pb-[calc(5rem+env(safe-area-inset-bottom))]">
+      {isBottomSheet && (
+        <div className="p-3 border-b border-slate-50 bg-slate-50/30 flex items-center shrink-0 w-full">
+          <span className="text-[10px] font-bold text-slate-500 tracking-tight">
+            📍 {sortedMosques.length} mosques within {searchRadius >= 1000 ? `${searchRadius / 1000}km` : `${searchRadius}m`}
+          </span>
+        </div>
+      )}
+
+      <div className={`divide-y divide-slate-50 ${isBottomSheet ? 'pb-12' : 'pb-[calc(5rem+env(safe-area-inset-bottom))]'}`}>
         {sortedMosques.length === 0 ? (
           <div className="p-12 text-center">
             <MapPin className="w-12 h-12 text-slate-200 mx-auto mb-4" />
