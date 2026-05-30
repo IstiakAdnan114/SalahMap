@@ -752,51 +752,73 @@ export default function App() {
 
         {/* Map Controls: Eye/EyeOff and Tag (Mosques/Labels toggles) — top right corner below top bar */}
         {!isAnyModalOpen && (
-          <div className="absolute top-[calc(5rem+env(safe-area-inset-top))] right-4 z-[400] flex flex-col gap-2 pointer-events-auto">
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={handleToggleMosques}
-              className={`flex items-center justify-center w-10 h-10 rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.3)] border border-black/10 transition-all ${
-                mosquesVisible ? 'bg-[#fdfdfd] text-[#0F7A5C]' : 'bg-slate-200 text-slate-500'
-              }`}
-              title="Toggle Mosques"
-            >
-              {mosquesVisible ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
-            </motion.button>
+          <div className="absolute top-[calc(5rem+env(safe-area-inset-top))] right-4 z-[400] flex flex-col gap-3 items-end pointer-events-auto">
+            {/* Mosques Toggle */}
+            <div className="flex items-center gap-2">
+              <span className="bg-white px-3 py-1.5 rounded-full text-[10px] font-black text-[#1a5c38] shadow-[0_2px_10px_rgba(0,0,0,0.15)] uppercase tracking-wider border border-[#1a5c38]/15 select-none font-sans">
+                Mosques
+              </span>
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.92 }}
+                onClick={handleToggleMosques}
+                className={`flex items-center justify-center w-[52px] h-[52px] rounded-full shadow-[0_4px_16px_rgba(0,0,0,0.2)] transition-all ${
+                  mosquesVisible 
+                    ? 'bg-white text-[#0F7A5C] border-2 border-[#1a5c38]' 
+                    : 'bg-[#1a5c38] text-white border-2 border-[#1a5c38]'
+                }`}
+                title="Toggle Mosques"
+              >
+                {mosquesVisible ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
+              </motion.button>
+            </div>
 
-            <motion.button
-              whileTap={{ scale: 0.95 }}
-              onClick={() => setShowLabels(!showLabels)}
-              className={`flex items-center justify-center w-10 h-10 rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.3)] border border-black/10 transition-all ${
-                showLabels ? 'bg-[#fdfdfd] text-[#0F7A5C]' : 'bg-slate-200 text-slate-500'
-              }`}
-              title="Toggle Labels"
-            >
-              <Tag className="w-5 h-5" />
-            </motion.button>
+            {/* Labels Toggle */}
+            <div className="flex items-center gap-2">
+              <span className="bg-white px-3 py-1.5 rounded-full text-[10px] font-black text-[#1a5c38] shadow-[0_2px_10px_rgba(0,0,0,0.15)] uppercase tracking-wider border border-[#1a5c38]/15 select-none font-sans">
+                Labels
+              </span>
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.92 }}
+                onClick={() => setShowLabels(!showLabels)}
+                className={`flex items-center justify-center w-[52px] h-[52px] rounded-full shadow-[0_4px_16px_rgba(0,0,0,0.2)] transition-all ${
+                  showLabels 
+                    ? 'bg-white text-[#0F7A5C] border-2 border-[#1a5c38]' 
+                    : 'bg-[#1a5c38] text-white border-2 border-[#1a5c38]'
+                }`}
+                title="Toggle Labels"
+              >
+                <Tag className="w-5 h-5" />
+              </motion.button>
+            </div>
           </div>
         )}
 
         {/* Map Controls: RefreshCw and MapPinPlus (Refresh/Add) — bottom right corner, covered when sheet is fully up */}
         {!isAnyModalOpen && (
-          <div className="absolute bottom-[105px] right-4 z-[300] flex flex-col gap-2 pointer-events-auto">
+          <div className="absolute bottom-[105px] right-4 z-[300] flex flex-col gap-3 items-end pointer-events-auto">
+            {/* Refresh Button */}
             <motion.button
-              whileTap={{ scale: 0.95 }}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.92 }}
               onClick={() => fetchMosques(mapCenter[0], mapCenter[1], searchRadius, true)}
               disabled={isSyncing}
-              className="flex items-center justify-center w-10 h-10 bg-[#fdfdfd] text-[#0F7A5C] rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.3)] border border-black/10 transition-all hover:bg-slate-50"
+              className="flex items-center justify-center w-[52px] h-[52px] bg-white text-[#0F7A5C] border-2 border-[#1a5c38] rounded-full shadow-[0_4px_16px_rgba(0,0,0,0.2)] transition-all"
               title="Refresh Data"
             >
               <RefreshCw className={`w-5 h-5 ${isSyncing ? 'animate-spin' : ''}`} />
             </motion.button>
 
+            {/* Add Button */}
             <motion.button
-              whileTap={{ scale: 0.95 }}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.92 }}
               onClick={() => setIsAddModalOpen(true)}
-              className="flex items-center justify-center w-10 h-10 bg-[#fdfdfd] text-[#0F7A5C] rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.3)] border border-black/10 transition-all hover:bg-slate-50"
+              className="flex items-center justify-center w-[56px] h-[56px] bg-[#0F7A5C] hover:bg-[#0D6B50] text-white rounded-full shadow-[0_4px_16px_rgba(0,0,0,0.2)] transition-all font-bold"
               title="Add Mosque"
             >
-              <MapPinPlus className="w-5 h-5" />
+              <MapPinPlus className="w-6 h-6" />
             </motion.button>
           </div>
         )}
