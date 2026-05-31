@@ -80,7 +80,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, radius, 
 
               {/* About Section */}
               <section className="pt-6 border-t border-slate-50">
-                <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-4">About Mosque Finder</h3>
+                <h3 className="text-xs font-black uppercase tracking-widest text-slate-400 mb-4">About SalahMap</h3>
                 <div className="bg-slate-50 rounded-2xl p-4">
                   <p className="text-xs text-slate-600 leading-relaxed">
                     This app helps you find nearby mosques and accurate jamat times in Bangladesh. 
@@ -107,7 +107,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose, radius, 
                 </div>
                 <div className="bg-emerald-50/50 rounded-2xl p-5 border border-emerald-100/50">
                   <p className="text-xs text-slate-700 leading-relaxed font-medium mb-4">
-                    Found an issue or have a suggestion? Let us know! Your feedback helps us improve Mosque Finder for everyone.
+                    Found an issue or have a suggestion? Let us know! Your feedback helps us improve SalahMap for everyone.
                   </p>
                   <a 
                     href="https://forms.gle/VN2wvyEFY5PHnwNf6" 
