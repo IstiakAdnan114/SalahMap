@@ -432,7 +432,6 @@ const MosquePopup: React.FC<MosquePopupProps> = ({ mosque, onClose, onDelete, on
                   const confidence = total > 0 ? (p.up / total) * 100 : 50;
                   const isVerified = p.score >= 5;
                   const isDoubtful = p.score <= -3;
-
                   return (
                     <div key={p.label} className="bg-slate-50 p-5 rounded-3xl border border-slate-100 shadow-sm">
                       <div className="flex items-center justify-between mb-4">

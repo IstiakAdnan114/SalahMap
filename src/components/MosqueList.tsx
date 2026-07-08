@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Mosque, getDistance, PrayerTimes, PrayerName } from '../types';
+import { Mosque, getDistance, PrayerTimes } from '../types';
 import { MapPin, Navigation, Clock, ChevronRight } from 'lucide-react';
 import { motion } from 'motion/react';
 import { mosqueService } from '../services/mosqueService';
+import { getNextAndPrevPrayer } from '../lib/prayerUtils';
 
 interface MosqueListProps {
   mosques: Mosque[];
@@ -41,61 +42,6 @@ const MosqueList: React.FC<MosqueListProps> = ({
       fetchAllTimes();
     }
   }, [mosques]);
-
-  const getNextJamat = (mosqueId: string) => {
-    const times = prayerTimesMap[mosqueId];
-    if (!times) return null;
-
-    const now = new Date();
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
-
-    const isFriday = now.getDay() === 5;
-    const prayers: { name: string; time: string; minutes: number }[] = [
-      { name: 'Fajr', time: times.fajr, minutes: timeToMinutes(times.fajr) },
-      ...(isFriday && times.jumua ? [{ name: "Jumu'ah", time: times.jumua, minutes: timeToMinutes(times.jumua) }] : []),
-      { name: 'Dhuhr', time: times.dhuhr, minutes: timeToMinutes(times.dhuhr) },
-      { name: 'Asr', time: times.asr, minutes: timeToMinutes(times.asr) },
-      { name: 'Maghrib', time: times.maghrib, minutes: timeToMinutes(times.maghrib) },
-      { name: 'Isha', time: times.isha, minutes: timeToMinutes(times.isha) },
-    ];
-
-    // Find the first prayer that is after now
-    let next = prayers.find(p => p.minutes > currentMinutes);
-    
-    // If no prayer left today, next is Fajr tomorrow
-    if (!next) {
-      next = prayers[0];
-    }
-
-    return {
-      ...next,
-      formattedTime: formatTime12h(next.time)
-    };
-  };
-
-  const formatTime12h = (time24: string) => {
-    if (!time24) return '--:--';
-    const [hoursStr, minutesStr] = time24.split(':');
-    let hours = parseInt(hoursStr);
-    const minutes = minutesStr;
-    const period = hours >= 12 ? 'PM' : 'AM';
-    hours = hours % 12 || 12;
-    return `${hours}:${minutes} ${period}`;
-  };
-
-  const timeToMinutes = (timeStr: string | null) => {
-    if (!timeStr) return 0;
-    const [time, period] = timeStr.split(' ');
-    const timeParts = time.split(':');
-    if (timeParts.length < 2) return 0;
-    
-    let [hours, minutes] = timeParts.map(Number);
-    
-    if (period === 'PM' && hours !== 12) hours += 12;
-    if (period === 'AM' && hours === 12) hours = 0;
-    
-    return hours * 60 + minutes;
-  };
 
   const sortedMosques = [...mosques]
     .map(m => ({
@@ -149,7 +95,8 @@ const MosqueList: React.FC<MosqueListProps> = ({
           </div>
         ) : (
           sortedMosques.map((mosque, index) => {
-            const nextJamat = getNextJamat(mosque.id);
+            const times = prayerTimesMap[mosque.id];
+            const prayerTimes = getNextAndPrevPrayer(times || null);
             return (
               <motion.button
                 initial={{ opacity: 0, y: 10 }}
@@ -172,19 +119,39 @@ const MosqueList: React.FC<MosqueListProps> = ({
                   </div>
                   <p className="text-xs text-slate-500 truncate mt-0.5">{mosque.address || 'Address not available'}</p>
                   
-                  <div className="flex items-center justify-between mt-3">
-                    <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-tight">
-                      <Clock className="w-3.5 h-3.5 text-emerald-500" />
-                      Next Jamat: 
-                      {nextJamat ? (
-                        <span className="text-emerald-600 font-black">
-                          {nextJamat.name} @ {nextJamat.formattedTime}
-                        </span>
+                  <div className="flex items-end justify-between mt-3 pt-2 border-t border-slate-100">
+                    <div className="flex flex-col gap-1.5 min-w-0 flex-1">
+                      {/* Previous Jamat */}
+                      {prayerTimes.prev ? (
+                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-tight">
+                          <Clock className="w-3.5 h-3.5 text-slate-300 shrink-0" />
+                          <span className="shrink-0 text-slate-400">Last Jamat:</span>
+                          <span className={`truncate ${prayerTimes.prev.isFresh ? "text-amber-600 font-black" : "text-slate-500 font-medium"}`}>
+                            {prayerTimes.prev.name} @ {prayerTimes.prev.formattedTime} • {prayerTimes.prev.formattedMinutesAgo} {prayerTimes.prev.isFresh && "🟠"}
+                          </span>
+                        </div>
                       ) : (
-                        <span className="text-slate-300 italic">Not available</span>
+                        <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-tight">
+                          <Clock className="w-3.5 h-3.5 text-slate-300 shrink-0" />
+                          <span className="shrink-0 text-slate-400">Last Jamat:</span>
+                          <span className="text-slate-300 italic font-medium">None</span>
+                        </div>
                       )}
+
+                      {/* Next Jamat */}
+                      <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-tight">
+                        <Clock className="w-3.5 h-3.5 text-[#0F7A5C] shrink-0" />
+                        <span className="shrink-0 text-slate-[#0F7A5C]">Next Jamat:</span>
+                        {prayerTimes.next ? (
+                          <span className="text-[#0F7A5C] font-black truncate">
+                            {prayerTimes.next.name} @ {prayerTimes.next.formattedTime}
+                          </span>
+                        ) : (
+                          <span className="text-slate-300 italic font-medium">Not available</span>
+                        )}
+                      </div>
                     </div>
-                    <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-emerald-500 transition-colors" />
+                    <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-emerald-500 transition-colors shrink-0 ml-2 mb-0.5" />
                   </div>
                 </div>
               </motion.button>
