@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Tooltip, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { motion } from 'motion/react';
 import { Mosque, COUNTRY_BOUNDS, COUNTRY_CENTER } from '../types';
 import MosquePopup from './MosquePopup';
+import { useCompassHeading } from '../hooks/useCompassHeading';
 
-// Add custom styles for tooltips
+// Add custom styles for tooltips and user location marker
 const tooltipStyles = `
   .mosque-tooltip {
     background: white !important;
@@ -19,6 +20,10 @@ const tooltipStyles = `
   }
   .mosque-tooltip::before {
     border-top-color: #0F7A5C !important;
+  }
+  .user-location-marker-container {
+    background: none !important;
+    border: none !important;
   }
 `;
 
@@ -117,19 +122,56 @@ const MosqueIcon = L.icon({
   popupAnchor: [0, -22],
 });
 
-const UserLocationIcon = L.divIcon({
-  className: 'user-location-marker',
-  html: `
-    <div class="relative flex items-center justify-center">
-      <div class="absolute w-6 h-6 bg-blue-500 rounded-full animate-ping opacity-20"></div>
-      <div class="relative w-4 h-4 bg-blue-600 rounded-full border-2 border-white shadow-lg"></div>
-    </div>
-  `,
-  iconSize: [24, 24],
-  iconAnchor: [12, 12],
-});
+const createUserLocationIcon = (heading: number | null) => {
+  const hasHeading = heading !== null && heading !== undefined;
+
+  return L.divIcon({
+    className: 'user-location-marker-container',
+    html: `
+      <div class="relative w-[80px] h-[80px] flex items-center justify-center pointer-events-none select-none">
+        ${
+          hasHeading
+            ? `
+          <div 
+            class="absolute inset-0 flex items-center justify-center transition-transform duration-150 ease-out"
+            style="transform: rotate(${heading}deg); transform-origin: 40px 40px;"
+          >
+            <svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <radialGradient id="userConeGrad" cx="40" cy="40" r="38" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stop-color="#2563EB" stop-opacity="0.45" />
+                  <stop offset="55%" stop-color="#3B82F6" stop-opacity="0.2" />
+                  <stop offset="100%" stop-color="#60A5FA" stop-opacity="0" />
+                </radialGradient>
+              </defs>
+              <path d="M 40 40 L 21 7.1 A 38 38 0 0 1 59 7.1 Z" fill="url(#userConeGrad)" stroke="rgba(59, 130, 246, 0.3)" stroke-width="0.5" />
+            </svg>
+          </div>
+        `
+            : ''
+        }
+        <!-- Pulsing accuracy ring -->
+        <div class="absolute w-7 h-7 bg-blue-500 rounded-full animate-ping opacity-25"></div>
+        
+        <!-- Soft glowing center aura -->
+        <div class="absolute w-5 h-5 bg-blue-400 rounded-full opacity-40 blur-[1px]"></div>
+
+        <!-- Center Blue Dot with White Border -->
+        <div class="relative w-4 h-4 bg-blue-600 rounded-full border-2 border-white shadow-md"></div>
+      </div>
+    `,
+    iconSize: [80, 80],
+    iconAnchor: [40, 40],
+  });
+};
 
 const Map: React.FC<MapProps & { forceRecenter?: number }> = ({ center, userLocation, mosques, showLabels = true, onMosqueSelect, onCenterChange, onDeleteMosque, forceRecenter = 0, isAdding = false }) => {
+  const { heading } = useCompassHeading();
+
+  const userLocationIcon = useMemo(() => {
+    return createUserLocationIcon(heading);
+  }, [heading]);
+
   return (
     <div className="h-full w-full relative z-0">
       <style>{tooltipStyles}</style>
@@ -148,9 +190,9 @@ const Map: React.FC<MapProps & { forceRecenter?: number }> = ({ center, userLoca
         <RecenterMap center={center} force={forceRecenter} />
         <MapEvents onCenterChange={onCenterChange} />
         
-        {/* User Location Marker (Blue Dot) */}
+        {/* User Location Marker with Live Heading Cone */}
         {userLocation && (
-          <Marker position={userLocation} icon={UserLocationIcon} />
+          <Marker position={userLocation} icon={userLocationIcon} />
         )}
 
         {mosques.map((mosque) => (

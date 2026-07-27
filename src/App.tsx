@@ -299,7 +299,19 @@ export default function App() {
 
   const [isLocating, setIsLocating] = useState(false);
 
-  const handleRecenter = () => {
+  const handleRecenter = async () => {
+    // Request device orientation permission for iOS Safari if required
+    if (
+      typeof DeviceOrientationEvent !== 'undefined' &&
+      typeof (DeviceOrientationEvent as any).requestPermission === 'function'
+    ) {
+      try {
+        await (DeviceOrientationEvent as any).requestPermission();
+      } catch (err) {
+        console.warn('Compass permission request error:', err);
+      }
+    }
+
     if (navigator.geolocation) {
       setIsLocating(true);
       
