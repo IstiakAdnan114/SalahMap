@@ -277,15 +277,10 @@ export const mosqueService = {
         }
         
         if (error) {
-          // Only log if it's not a configuration error (Invalid API Key)
-          if (!error.message?.includes('Invalid API key')) {
-            console.error('Error fetching prayer times:', error);
-          }
+          console.warn('Could not fetch prayer times from database, falling back to local storage:', error.message || error);
         }
-        
-        return null;
       } catch (e) {
-        console.error('Supabase getPrayerTimes error:', e);
+        console.warn('Supabase getPrayerTimes error:', e);
       }
     }
 
@@ -748,9 +743,7 @@ export const mosqueService = {
           .maybeSingle();
 
         if (ptError) {
-          if (!ptError.message?.includes('Invalid API key')) {
-            console.error('Error fetching prayer times for user votes:', ptError);
-          }
+          console.warn('Could not fetch prayer times for user votes:', ptError.message || ptError);
           return [];
         }
 
@@ -762,13 +755,13 @@ export const mosqueService = {
             .eq('user_id', effectiveUserId);
           
           if (error) {
-            console.error('Error fetching user votes:', error);
+            console.warn('Could not fetch user votes:', error.message || error);
             return [];
           }
           return data || [];
         }
       } catch (e) {
-        console.error('Supabase getUserVotes error:', e);
+        console.warn('Supabase getUserVotes error:', e);
       }
     }
     return [];
