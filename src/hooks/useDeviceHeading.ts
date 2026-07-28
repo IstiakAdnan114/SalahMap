@@ -21,18 +21,6 @@ export function useDeviceHeading(): UseDeviceHeadingResult {
 
   const isListeningRef = useRef(false);
 
-  // Get screen orientation offset (portrait = 0, landscape = 90 / -90 / 270)
-  const getScreenOrientation = (): number => {
-    if (typeof window === 'undefined') return 0;
-    if (window.screen && window.screen.orientation && typeof window.screen.orientation.angle === 'number') {
-      return window.screen.orientation.angle;
-    }
-    if (typeof window.orientation === 'number') {
-      return window.orientation;
-    }
-    return 0;
-  };
-
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -44,7 +32,6 @@ export function useDeviceHeading(): UseDeviceHeadingResult {
       return;
     }
 
-    // Check if explicit permission API exists (iOS 13+)
     const DeviceOrientationEventTyped = DeviceOrientationEvent as unknown as {
       requestPermission?: () => Promise<'granted' | 'denied'>;
     };
@@ -57,27 +44,21 @@ export function useDeviceHeading(): UseDeviceHeadingResult {
   }, []);
 
   const handleOrientation = useCallback((event: DeviceOrientationEvent) => {
-    let compassHeading: number | null = null;
+    let rawHeading: number | null = null;
 
-    // 1. iOS WebKit Compass Heading (Magnetic North, 0..360)
+    // iOS webkitCompassHeading
     if ('webkitCompassHeading' in event && typeof (event as any).webkitCompassHeading === 'number') {
       const iosHeading = (event as any).webkitCompassHeading;
       if (!isNaN(iosHeading)) {
-        compassHeading = iosHeading;
+        rawHeading = iosHeading;
       }
     } else if (event.alpha !== null && event.alpha !== undefined && !isNaN(event.alpha)) {
-      // 2. Android / W3C Device Orientation alpha
-      // alpha = 0 is North in W3C spec if absolute=true, rotating counter-clockwise
-      const alpha = event.alpha;
-      const screenAngle = getScreenOrientation();
-
-      // Convert alpha to compass heading (clockwise from North) and account for screen rotation
-      let calculatedHeading = 360 - alpha + screenAngle;
-      compassHeading = (calculatedHeading % 360 + 360) % 360;
+      // Android / W3C standard: heading = 360 - alpha
+      rawHeading = (360 - event.alpha) % 360;
     }
 
-    if (compassHeading !== null && !isNaN(compassHeading)) {
-      const normalized = Math.round((compassHeading % 360 + 360) % 360);
+    if (rawHeading !== null && !isNaN(rawHeading)) {
+      const normalized = Math.round((rawHeading % 360 + 360) % 360);
       setHeadingState(normalized);
     }
   }, []);
@@ -107,14 +88,7 @@ export function useDeviceHeading(): UseDeviceHeadingResult {
 
     if (permissionState === 'granted' || permissionState === 'not-required') {
       startListening();
-
-      // Fallback default North 0° if hardware listener hasn't received first event yet
-      const timer = setTimeout(() => {
-        setHeadingState((prev) => (prev === null ? 0 : prev));
-      }, 500);
-
       return () => {
-        clearTimeout(timer);
         stopListening();
       };
     } else {
@@ -174,14 +148,11 @@ export function useDeviceHeading(): UseDeviceHeadingResult {
       
       if (permitted || permissionState === 'not-required' || permissionState === 'granted') {
         setIsHeadingEnabled(true);
-        if (heading === null) {
-          setHeadingState(0);
-        }
         return true;
       }
       return false;
     }
-  }, [isHeadingEnabled, permissionState, requestPermission, heading]);
+  }, [isHeadingEnabled, permissionState, requestPermission]);
 
   return {
     heading,

@@ -9,31 +9,6 @@ interface UserLocationMarkerProps {
 
 export const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position, heading }) => {
   const markerRef = useRef<L.Marker>(null);
-  const prevHeadingRef = useRef<number>(heading ?? 0);
-  const continuousAngleRef = useRef<number>(heading ?? 0);
-
-  // Calculate continuous shortest-path rotation angle to prevent 350-deg reverse spins when wrapping 0°/360°
-  useEffect(() => {
-    if (heading === null) return;
-
-    let diff = heading - (prevHeadingRef.current % 360);
-    if (diff < -180) diff += 360;
-    if (diff > 180) diff -= 360;
-
-    continuousAngleRef.current += diff;
-    prevHeadingRef.current = heading;
-
-    if (markerRef.current) {
-      const el = markerRef.current.getElement();
-      if (el) {
-        const coneEl = el.querySelector('.heading-cone-group') as HTMLElement;
-        if (coneEl) {
-          coneEl.style.display = 'block';
-          coneEl.style.transform = `rotate(${continuousAngleRef.current}deg)`;
-        }
-      }
-    }
-  }, [heading]);
 
   const customIcon = useMemo(() => {
     const size = 96;
@@ -47,7 +22,8 @@ export const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position
     const y2 = center - radius * Math.cos((30 * Math.PI) / 180);
 
     const conePath = `M ${center} ${center} L ${x1.toFixed(2)} ${y1.toFixed(2)} A ${radius} ${radius} 0 0 1 ${x2.toFixed(2)} ${y2.toFixed(2)} Z`;
-    const initialAngle = heading ?? 0;
+    const currentHeading = heading !== null ? heading : 0;
+    const showCone = heading !== null;
 
     const svgContent = `
       <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg" style="overflow: visible;">
@@ -60,11 +36,15 @@ export const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position
         </defs>
 
         <!-- Rotating Cone Group -->
-        <g class="heading-cone-group" style="transform: rotate(${initialAngle}deg); transform-origin: ${center}px ${center}px; transition: transform 0.15s cubic-bezier(0.2, 0, 0.2, 1); display: ${heading !== null ? 'block' : 'none'};">
-          <path d="${conePath}" fill="url(#user-heading-cone-gradient)" />
-          <line x1="${center}" y1="${center}" x2="${x1.toFixed(2)}" y2="${y1.toFixed(2)}" stroke="#3B82F6" stroke-opacity="0.4" stroke-width="1" />
-          <line x1="${center}" y1="${center}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}" stroke="#3B82F6" stroke-opacity="0.4" stroke-width="1" />
-        </g>
+        ${
+          showCone
+            ? `<g class="heading-cone-group" transform="rotate(${currentHeading}, ${center}, ${center})">
+                <path d="${conePath}" fill="url(#user-heading-cone-gradient)" />
+                <line x1="${center}" y1="${center}" x2="${x1.toFixed(2)}" y2="${y1.toFixed(2)}" stroke="#3B82F6" stroke-opacity="0.4" stroke-width="1" />
+                <line x1="${center}" y1="${center}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}" stroke="#3B82F6" stroke-opacity="0.4" stroke-width="1" />
+              </g>`
+            : ''
+        }
 
         <!-- Outer Pulsing Glow -->
         <circle cx="${center}" cy="${center}" r="15" fill="#3B82F6" opacity="0.25" class="animate-ping" style="transform-origin: ${center}px ${center}px;" />
@@ -83,7 +63,13 @@ export const UserLocationMarker: React.FC<UserLocationMarkerProps> = ({ position
       iconSize: [size, size],
       iconAnchor: [center, center],
     });
-  }, []); // Stable icon reference so Leaflet doesn't tear down the marker DOM element
+  }, [heading]);
+
+  useEffect(() => {
+    if (markerRef.current) {
+      markerRef.current.setIcon(customIcon);
+    }
+  }, [customIcon]);
 
   return <Marker ref={markerRef} position={position} icon={customIcon} zIndexOffset={1000} />;
 };
