@@ -4,7 +4,6 @@ import L from 'leaflet';
 import { motion } from 'motion/react';
 import { Mosque, COUNTRY_BOUNDS, COUNTRY_CENTER } from '../types';
 import MosquePopup from './MosquePopup';
-import UserLocationMarker from './UserLocationMarker';
 
 // Add custom styles for tooltips
 const tooltipStyles = `
@@ -41,7 +40,6 @@ L.Marker.prototype.options.icon = DefaultIcon;
 interface MapProps {
   center: [number, number];
   userLocation?: [number, number] | null;
-  heading?: number | null;
   mosques: Mosque[];
   showLabels?: boolean;
   onMosqueSelect: (mosque: Mosque) => void;
@@ -131,7 +129,7 @@ const UserLocationIcon = L.divIcon({
   iconAnchor: [12, 12],
 });
 
-const Map: React.FC<MapProps & { forceRecenter?: number }> = ({ center, userLocation, heading = null, mosques, showLabels = true, onMosqueSelect, onCenterChange, onDeleteMosque, forceRecenter = 0, isAdding = false }) => {
+const Map: React.FC<MapProps & { forceRecenter?: number }> = ({ center, userLocation, mosques, showLabels = true, onMosqueSelect, onCenterChange, onDeleteMosque, forceRecenter = 0, isAdding = false }) => {
   return (
     <div className="h-full w-full relative z-0">
       <style>{tooltipStyles}</style>
@@ -150,9 +148,9 @@ const Map: React.FC<MapProps & { forceRecenter?: number }> = ({ center, userLoca
         <RecenterMap center={center} force={forceRecenter} />
         <MapEvents onCenterChange={onCenterChange} />
         
-        {/* User Location Marker (Blue Dot + Heading Cone) */}
+        {/* User Location Marker (Blue Dot) */}
         {userLocation && (
-          <UserLocationMarker position={userLocation} heading={heading} />
+          <Marker position={userLocation} icon={UserLocationIcon} />
         )}
 
         {mosques.map((mosque) => (

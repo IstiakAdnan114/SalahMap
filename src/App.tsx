@@ -5,7 +5,7 @@ import { Mosque, COUNTRY_CENTER, COUNTRY_NAME, isInBounds, getDistance } from '.
 import { mosqueService } from './services/mosqueService';
 import { supabase, isSupabaseConfigured } from './lib/supabase';
 import Fuse from 'fuse.js';
-import { Search, Navigation, Plus, Eye, EyeOff, MapPin, MapPinned, RefreshCw, Cloud, CloudOff, Clock, Tag, Crosshair, MapPinPlus, Compass } from 'lucide-react';
+import { Search, Navigation, Plus, Eye, EyeOff, MapPin, MapPinned, RefreshCw, Cloud, CloudOff, Clock, Tag, Crosshair, MapPinPlus } from 'lucide-react';
 import { motion, AnimatePresence, useMotionValue, useTransform, animate } from 'motion/react';
 import MosquePopup from './components/MosquePopup';
 import MosqueList from './components/MosqueList';
@@ -13,7 +13,6 @@ import SavedView from './components/SavedView';
 import SettingsModal from './components/SettingsModal';
 import { MosqueImporter } from './components/MosqueImporter';
 import { Map as MapIcon, List, Bookmark, Settings } from 'lucide-react';
-import { useDeviceHeading } from './hooks/useDeviceHeading';
 
 interface Suggestion {
   id: string;
@@ -31,17 +30,6 @@ export default function App() {
   const [searchRadius, setSearchRadius] = useState(500);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
-
-  const { heading, permissionState, isHeadingEnabled, toggleHeading } = useDeviceHeading();
-
-  const handleShowDirection = async () => {
-    if (permissionState === 'unsupported') {
-      alert('Compass orientation is not supported on this device/browser.');
-      return;
-    }
-    
-    await toggleHeading();
-  };
   const [mosques, setMosques] = useState<Mosque[]>([]);
   const [syncedDeletedIds, setSyncedDeletedIds] = useState<Set<string>>(new Set());
   useEffect(() => {
@@ -723,7 +711,6 @@ export default function App() {
         <Map 
           center={mapCenter} 
           userLocation={userLocation}
-          heading={heading}
           mosques={mosquesVisible ? mosques : []} 
           showLabels={showLabels}
           onMosqueSelect={(m) => setSelectedMosque(m)} 
@@ -803,29 +790,6 @@ export default function App() {
                 title="Toggle Labels"
               >
                 <Tag className="w-5 h-5" />
-              </motion.button>
-            </div>
-
-            {/* Direction / Compass Button */}
-            <div className="flex items-center gap-2">
-              <span className="bg-white px-3 py-1.5 rounded-full text-[10px] font-black text-[#1a5c38] shadow-[0_2px_10px_rgba(0,0,0,0.15)] uppercase tracking-wider border border-[#1a5c38]/15 select-none font-sans">
-                {heading !== null ? `${heading}°` : 'Direction'}
-              </span>
-              <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.92 }}
-                onClick={handleShowDirection}
-                className={`flex items-center justify-center w-[52px] h-[52px] rounded-full shadow-[0_4px_16px_rgba(0,0,0,0.2)] transition-all ${
-                  isHeadingEnabled
-                    ? 'bg-[#0F7A5C] text-white border-2 border-[#1a5c38]'
-                    : 'bg-white text-[#0F7A5C] border-2 border-[#1a5c38]'
-                }`}
-                title="Show my direction"
-              >
-                <Compass 
-                  className="w-5 h-5 transition-transform duration-200" 
-                  style={heading !== null ? { transform: `rotate(${heading}deg)` } : undefined} 
-                />
               </motion.button>
             </div>
           </div>
