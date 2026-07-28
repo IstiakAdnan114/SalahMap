@@ -10,20 +10,28 @@ export interface UseDeviceHeadingResult {
   toggleHeading: () => Promise<boolean>;
   requestPermission: () => Promise<boolean>;
   error: string | null;
-  isSimulated: boolean;
 }
 
 export function useDeviceHeading(): UseDeviceHeadingResult {
-  const [heading, setHeading] = useState<number | null>(null);
+  const [heading, setHeadingState] = useState<number | null>(null);
   const [isHeadingEnabled, setIsHeadingEnabled] = useState<boolean>(true);
   const [permissionState, setPermissionState] = useState<PermissionState>('prompt');
   const [isSupported, setIsSupported] = useState<boolean>(false);
-  const [isSimulated, setIsSimulated] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   const isListeningRef = useRef(false);
-  const hasHardwareDataRef = useRef(false);
-  const simulatedTimerRef = useRef<number | null>(null);
+
+  // Get screen orientation offset (portrait = 0, landscape = 90 / -90 / 270)
+  const getScreenOrientation = (): number => {
+    if (typeof window === 'undefined') return 0;
+    if (window.screen && window.screen.orientation && typeof window.screen.orientation.angle === 'number') {
+      return window.screen.orientation.angle;
+    }
+    if (typeof window.orientation === 'number') {
+      return window.orientation;
+    }
+    return 0;
+  };
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -49,22 +57,28 @@ export function useDeviceHeading(): UseDeviceHeadingResult {
   }, []);
 
   const handleOrientation = useCallback((event: DeviceOrientationEvent) => {
-    let rawHeading: number | null = null;
+    let compassHeading: number | null = null;
 
-    // 1. iOS webkitCompassHeading (0 = North, 90 = East, etc.)
+    // 1. iOS WebKit Compass Heading (Magnetic North, 0..360)
     if ('webkitCompassHeading' in event && typeof (event as any).webkitCompassHeading === 'number') {
-      rawHeading = (event as any).webkitCompassHeading;
-    } else if (event.alpha !== null && event.alpha !== undefined) {
-      // 2. Standard W3C alpha (0..360)
-      // 360 - alpha converts counter-clockwise alpha into clockwise compass heading
-      rawHeading = (360 - event.alpha) % 360;
+      const iosHeading = (event as any).webkitCompassHeading;
+      if (!isNaN(iosHeading)) {
+        compassHeading = iosHeading;
+      }
+    } else if (event.alpha !== null && event.alpha !== undefined && !isNaN(event.alpha)) {
+      // 2. Android / W3C Device Orientation alpha
+      // alpha = 0 is North in W3C spec if absolute=true, rotating counter-clockwise
+      const alpha = event.alpha;
+      const screenAngle = getScreenOrientation();
+
+      // Convert alpha to compass heading (clockwise from North) and account for screen rotation
+      let calculatedHeading = 360 - alpha + screenAngle;
+      compassHeading = (calculatedHeading % 360 + 360) % 360;
     }
 
-    if (rawHeading !== null && !isNaN(rawHeading)) {
-      hasHardwareDataRef.current = true;
-      setIsSimulated(false);
-      const normalized = (rawHeading % 360 + 360) % 360;
-      setHeading(Math.round(normalized));
+    if (compassHeading !== null && !isNaN(compassHeading)) {
+      const normalized = Math.round((compassHeading % 360 + 360) % 360);
+      setHeadingState(normalized);
     }
   }, []);
 
@@ -84,26 +98,20 @@ export function useDeviceHeading(): UseDeviceHeadingResult {
     isListeningRef.current = false;
   }, [handleOrientation]);
 
-  // Handle fallback simulation for desktop browsers without orientation sensors
   useEffect(() => {
     if (!isHeadingEnabled) {
       stopListening();
-      if (simulatedTimerRef.current) clearInterval(simulatedTimerRef.current);
-      setHeading(null);
+      setHeadingState(null);
       return;
     }
 
     if (permissionState === 'granted' || permissionState === 'not-required') {
       startListening();
 
-      // Check after 800ms if hardware sensor is active
+      // Fallback default North 0° if hardware listener hasn't received first event yet
       const timer = setTimeout(() => {
-        if (!hasHardwareDataRef.current) {
-          // No hardware sensor (likely desktop preview), set initial simulation angle (e.g. 45 degrees pointing North-East)
-          setIsSimulated(true);
-          setHeading((prev) => (prev === null ? 45 : prev));
-        }
-      }, 800);
+        setHeadingState((prev) => (prev === null ? 0 : prev));
+      }, 500);
 
       return () => {
         clearTimeout(timer);
@@ -111,7 +119,7 @@ export function useDeviceHeading(): UseDeviceHeadingResult {
       };
     } else {
       stopListening();
-      setHeading(null);
+      setHeadingState(null);
     }
   }, [isHeadingEnabled, permissionState, startListening, stopListening]);
 
@@ -156,7 +164,7 @@ export function useDeviceHeading(): UseDeviceHeadingResult {
   const toggleHeading = useCallback(async (): Promise<boolean> => {
     if (isHeadingEnabled) {
       setIsHeadingEnabled(false);
-      setHeading(null);
+      setHeadingState(null);
       return false;
     } else {
       let permitted = true;
@@ -166,16 +174,14 @@ export function useDeviceHeading(): UseDeviceHeadingResult {
       
       if (permitted || permissionState === 'not-required' || permissionState === 'granted') {
         setIsHeadingEnabled(true);
-        // On desktop or when clicking toggle repeatedly, rotate simulation angle by +45 deg for feedback
-        if (!hasHardwareDataRef.current) {
-          setIsSimulated(true);
-          setHeading((prev) => (prev === null ? 45 : (prev + 45) % 360));
+        if (heading === null) {
+          setHeadingState(0);
         }
         return true;
       }
       return false;
     }
-  }, [isHeadingEnabled, permissionState, requestPermission]);
+  }, [isHeadingEnabled, permissionState, requestPermission, heading]);
 
   return {
     heading,
@@ -185,6 +191,5 @@ export function useDeviceHeading(): UseDeviceHeadingResult {
     toggleHeading,
     requestPermission,
     error,
-    isSimulated,
   };
 }

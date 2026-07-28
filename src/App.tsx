@@ -32,7 +32,7 @@ export default function App() {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [userLocation, setUserLocation] = useState<[number, number] | null>(null);
 
-  const { heading, permissionState, isSupported, isHeadingEnabled, toggleHeading, requestPermission } = useDeviceHeading();
+  const { heading, permissionState, isHeadingEnabled, toggleHeading } = useDeviceHeading();
 
   const handleShowDirection = async () => {
     if (permissionState === 'unsupported') {
@@ -816,7 +816,7 @@ export default function App() {
                 whileTap={{ scale: 0.92 }}
                 onClick={handleShowDirection}
                 className={`flex items-center justify-center w-[52px] h-[52px] rounded-full shadow-[0_4px_16px_rgba(0,0,0,0.2)] transition-all ${
-                  heading !== null
+                  isHeadingEnabled
                     ? 'bg-[#0F7A5C] text-white border-2 border-[#1a5c38]'
                     : 'bg-white text-[#0F7A5C] border-2 border-[#1a5c38]'
                 }`}
